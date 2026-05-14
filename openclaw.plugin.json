@@ -1,0 +1,66 @@
+{
+  "id": "xalgo_voice",
+  "name": "Xalgo Voice",
+  "version": "0.1.0",
+  "description": "Voice channel plugin that connects Xalgo glasses and Pupa voice cloud to OpenClaw agents.",
+  "main": "./dist/index.js",
+  "openclaw": {
+    "extensions": ["./dist/index.js"],
+    "setupEntry": "./dist/setup-entry.js",
+    "channel": {
+      "id": "xalgo_voice",
+      "label": "Xalgo Voice",
+      "selectionLabel": "Xalgo Voice (语音)",
+      "docsPath": "/channels/xalgo-voice",
+      "blurb": "Talk to your OpenClaw agents through Xalgo voice devices.",
+      "order": 200
+    },
+    "install": {
+      "npmSpec": "@xalgo/voice-openclaw-plugin",
+      "localPath": "extensions/xalgo-voice",
+      "defaultChoice": "npm"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": false
+      },
+      "serverUrl": {
+        "type": "string",
+        "default": "wss://channel.xalgo.ai/openclaw/connect"
+      },
+      "token": {
+        "type": "string"
+      },
+      "agentId": {
+        "type": "string",
+        "default": "voice"
+      },
+      "sessionPrefix": {
+        "type": "string",
+        "default": "xalgo_voice"
+      },
+      "streaming": {
+        "type": "boolean",
+        "default": true
+      },
+      "replyMode": {
+        "type": "string",
+        "enum": ["voice_first", "text_first", "both"],
+        "default": "voice_first"
+      }
+    },
+    "required": ["token"]
+  },
+  "uiHints": {
+    "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
+    "serverUrl": { "label": "Server URL" },
+    "agentId": { "label": "Agent ID" },
+    "streaming": { "label": "Streaming Replies" },
+    "replyMode": { "label": "Reply Mode" }
+  }
+}
