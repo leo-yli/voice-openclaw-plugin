@@ -36,19 +36,39 @@ openclaw plugins install ./dist
 
 ## 配置
 
-### 1. 获取绑定码
+### 1. 在 Xalgo App 生成绑定码
 
-在 Xalgo App 中点击「连接 OpenClaw」，生成绑定码。
+打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
 
-### 2. 运行配置向导
+### 2. 在 OpenClaw 运行配置向导
 
-安装插件后，OpenClaw 会自动执行配置向导，提示输入：
-- **Channel Token** — 从 Xalgo App 获取的绑定 Token
-- **Server URL** — 默认 `wss://channel.xalgo.ai/openclaw/connect`
+```bash
+openclaw plugins setup xalgo-voice
+```
 
-### 3. 手动配置（可选）
+向导会引导：
 
-在 OpenClaw 配置文件 (`openclaw.json`) 中：
+1. 输入 8 位绑定码（不区分大小写）
+2. 输入 API Server 地址（默认 `https://channel.xalgo.ai`）
+3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
+4. 自动写入配置文件并建立 WebSocket 连接
+
+### 3. 设备管理
+
+绑定成功后：
+
+- 在 **Xalgo App → 设备列表** 可以查看已绑定的 OpenClaw、修改设备名、解绑、Rotate Token
+- 在 **OpenClaw 终端** 重新运行 `openclaw plugins setup xalgo-voice` 可以选择「保持现状 / 重新绑定 / 解绑」
+
+### 4. 安全说明
+
+- Channel Token 与本地 `instance_id` 双因子鉴权：Token 即使被复制到另一台机器也无法使用
+- App 端主动解绑后，插件秒级感知并自动清空本地凭据
+- 5 分钟内绑定码累计验证失败 ≥5 次即作废
+
+### 5. 手动配置（高级）
+
+绑定向导会自动写入以下配置到 `openclaw.json`。如有特殊需要也可手动调整：
 
 ```json
 {
@@ -56,7 +76,9 @@ openclaw plugins install ./dist
     "xalgoVoice": {
       "enabled": true,
       "serverUrl": "wss://channel.xalgo.ai/openclaw/connect",
-      "token": "${XALGO_CHANNEL_TOKEN}",
+      "apiBaseUrl": "https://channel.xalgo.ai",
+      "token": "<绑定向导自动写入>",
+      "instanceId": "<绑定向导自动写入>",
       "agentId": "voice",
       "sessionPrefix": "xalgo_voice",
       "streaming": true,
@@ -74,12 +96,6 @@ openclaw plugins install ./dist
     }
   }
 }
-```
-
-也可以通过环境变量设置 Token：
-
-```bash
-export XALGO_CHANNEL_TOKEN="your_token_here"
 ```
 
 ## 配置项说明
