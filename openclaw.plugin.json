@@ -31,10 +31,35 @@
       },
       "serverUrl": {
         "type": "string",
-        "default": "wss://asr-test.jlpay.com/openclaw/connect"
+        "description": "WebSocket Channel Server URL；缺省值由插件根目录 endpoints.json 提供"
+      },
+      "apiBaseUrl": {
+        "type": "string",
+        "description": "REST API base URL（用于绑定 exchange / rotate / unbind）；缺省值由插件根目录 endpoints.json 提供"
       },
       "token": {
-        "type": "string"
+        "type": "string",
+        "description": "Xalgo Channel Token；由绑定向导自动写入，请勿手动修改"
+      },
+      "instanceId": {
+        "type": "string",
+        "description": "插件实例 UUID v4；首次绑定时由向导生成并持久化，作为设备指纹参与鉴权。请勿手动修改"
+      },
+      "deviceLabel": {
+        "type": "string",
+        "description": "设备显示名称，默认 'OpenClaw on <hostname>'"
+      },
+      "boundAt": {
+        "type": "string",
+        "description": "绑定时间（ISO 8601）；由绑定向导写入"
+      },
+      "boundUserId": {
+        "type": "string",
+        "description": "已绑定的 Xalgo 用户 ID；仅供显示"
+      },
+      "boundUserName": {
+        "type": "string",
+        "description": "已绑定的 Xalgo 用户显示名；仅供显示"
       },
       "agentId": {
         "type": "string",
@@ -52,15 +77,39 @@
         "type": "string",
         "enum": ["voice_first", "text_first", "both"],
         "default": "voice_first"
+      },
+      "riskPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "confirmExternalSend": { "type": "boolean", "default": true },
+          "confirmDangerousTools": { "type": "boolean", "default": true },
+          "allowPureVoiceR3": { "type": "boolean", "default": false }
+        }
+      },
+      "reconnect": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "minDelayMs": { "type": "number", "default": 1000 },
+          "maxDelayMs": { "type": "number", "default": 30000 },
+          "resume": { "type": "boolean", "default": true }
+        }
       }
     },
     "required": ["token"]
   },
   "uiHints": {
     "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
-    "serverUrl": { "label": "Server URL" },
+    "serverUrl": { "label": "WebSocket URL" },
+    "apiBaseUrl": { "label": "API Server URL" },
     "agentId": { "label": "Agent ID" },
     "streaming": { "label": "Streaming Replies" },
-    "replyMode": { "label": "Reply Mode" }
+    "replyMode": { "label": "Reply Mode" },
+    "instanceId": { "label": "Instance ID (managed)", "readonly": true },
+    "deviceLabel": { "label": "Device Label" },
+    "boundAt": { "label": "Bound At (managed)", "readonly": true },
+    "boundUserId": { "label": "Bound User ID (managed)", "readonly": true },
+    "boundUserName": { "label": "Bound User (display)", "readonly": true }
   }
 }
