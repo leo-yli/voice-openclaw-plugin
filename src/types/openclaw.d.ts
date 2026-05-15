@@ -20,4 +20,13 @@ declare module "openclaw" {
     outbound: any;
     inbound: any;
   }
+
+  /** OpenClaw setup wizard 上下文（spec §13） */
+  export interface SetupContext {
+    prompt: (question: string) => Promise<string>;
+    writeConfig: (key: string, value: unknown) => Promise<void>;
+    log: (msg: string) => void;
+    /** 可选：读现有配置。OpenClaw 框架是否提供为 spec §14 开放问题 */
+    readConfig?: (key: string) => Promise<unknown>;
+  }
 }
