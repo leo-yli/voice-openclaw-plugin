@@ -31,7 +31,7 @@
       },
       "serverUrl": {
         "type": "string",
-        "default": "wss://channel.xalgo.ai/openclaw/connect"
+        "default": "wss://asr-test.jlpay.com/openclaw/connect"
       },
       "token": {
         "type": "string"

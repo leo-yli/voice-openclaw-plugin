@@ -49,7 +49,7 @@ openclaw plugins setup xalgo-voice
 向导会引导：
 
 1. 输入 8 位绑定码（不区分大小写）
-2. 输入 API Server 地址（默认 `https://channel.xalgo.ai`）
+2. 输入 API Server 地址（默认 `https://asr-test.jlpay.com`，测试期临时地址）
 3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
 4. 自动写入配置文件并建立 WebSocket 连接
 
@@ -75,8 +75,8 @@ openclaw plugins setup xalgo-voice
   "channels": {
     "xalgoVoice": {
       "enabled": true,
-      "serverUrl": "wss://channel.xalgo.ai/openclaw/connect",
-      "apiBaseUrl": "https://channel.xalgo.ai",
+      "serverUrl": "wss://asr-test.jlpay.com/openclaw/connect",
+      "apiBaseUrl": "https://asr-test.jlpay.com",
       "token": "<绑定向导自动写入>",
       "instanceId": "<绑定向导自动写入>",
       "agentId": "voice",
@@ -103,7 +103,7 @@ openclaw plugins setup xalgo-voice
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | `enabled` | boolean | `false` | 是否启用插件 |
-| `serverUrl` | string | `wss://channel.xalgo.ai/openclaw/connect` | Channel Server 地址 |
+| `serverUrl` | string | `wss://asr-test.jlpay.com/openclaw/connect` | Channel Server 地址（测试期） |
 | `token` | string | (必填) | Xalgo Channel Token |
 | `agentId` | string | `"voice"` | OpenClaw Agent ID |
 | `sessionPrefix` | string | `"xalgo_voice"` | Session ID 前缀 |

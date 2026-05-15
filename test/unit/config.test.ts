@@ -4,7 +4,7 @@ import { resolveConfig, DEFAULT_CONFIG } from "../../src/config.js";
 describe("resolveConfig", () => {
   it("includes new binding fields with defaults", () => {
     const cfg = resolveConfig({ token: "t" });
-    expect(cfg.apiBaseUrl).toBe("https://channel.xalgo.ai");
+    expect(cfg.apiBaseUrl).toBe("https://asr-test.jlpay.com");
     expect(cfg.instanceId).toBe("");
     expect(cfg.boundAt).toBe("");
     expect(cfg.boundUserId).toBe("");

@@ -32,7 +32,7 @@ export interface XalgoVoiceConfig {
 
 export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   enabled: false,
-  serverUrl: "wss://channel.xalgo.ai/openclaw/connect",
+  serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
   agentId: "voice",
   sessionPrefix: "xalgo_voice",
   streaming: true,
@@ -47,7 +47,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
     maxDelayMs: 30000,
     resume: true,
   },
-  apiBaseUrl: "https://channel.xalgo.ai",
+  apiBaseUrl: "https://asr-test.jlpay.com",
   instanceId: "",
   deviceLabel: "",
   boundAt: "",
