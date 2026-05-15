@@ -1,3 +1,5 @@
+import endpoints from "../endpoints.json" with { type: "json" };
+
 export interface RiskPolicy {
   confirmExternalSend: boolean;
   confirmDangerousTools: boolean;
@@ -32,7 +34,7 @@ export interface XalgoVoiceConfig {
 
 export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   enabled: false,
-  serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
+  serverUrl: endpoints.serverUrl,
   agentId: "voice",
   sessionPrefix: "xalgo_voice",
   streaming: true,
@@ -47,7 +49,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
     maxDelayMs: 30000,
     resume: true,
   },
-  apiBaseUrl: "https://asr-test.jlpay.com",
+  apiBaseUrl: endpoints.apiBaseUrl,
   instanceId: "",
   deviceLabel: "",
   boundAt: "",

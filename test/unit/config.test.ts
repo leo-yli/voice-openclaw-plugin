@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { resolveConfig, DEFAULT_CONFIG } from "../../src/config.js";
+import endpoints from "../../endpoints.json" with { type: "json" };
 
 describe("resolveConfig", () => {
-  it("includes new binding fields with defaults", () => {
+  it("includes new binding fields with defaults from endpoints.json", () => {
     const cfg = resolveConfig({ token: "t" });
-    expect(cfg.apiBaseUrl).toBe("https://asr-test.jlpay.com");
+    expect(cfg.apiBaseUrl).toBe(endpoints.apiBaseUrl);
+    expect(cfg.serverUrl).toBe(endpoints.serverUrl);
     expect(cfg.instanceId).toBe("");
     expect(cfg.boundAt).toBe("");
     expect(cfg.boundUserId).toBe("");

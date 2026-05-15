@@ -49,9 +49,12 @@ openclaw plugins setup xalgo-voice
 向导会引导：
 
 1. 输入 8 位绑定码（不区分大小写）
-2. 输入 API Server 地址（默认 `https://asr-test.jlpay.com`，测试期临时地址）
+2. 输入 API Server 地址（默认值来自项目根 `endpoints.json`，**当前测试期：`https://asr-test.jlpay.com`**）
 3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
 4. 自动写入配置文件并建立 WebSocket 连接
+
+> 💡 **开发者切换默认端点**：所有默认端点统一存放在项目根 `endpoints.json`，切换测试/生产环境只需改这一个文件。
+> 终端用户如需自定义，**不要**改 `node_modules` 里的 `endpoints.json`，请在 OpenClaw 配置中覆盖 `serverUrl` / `apiBaseUrl` 字段（参考下方"手动配置"示例）。
 
 ### 3. 设备管理
 
