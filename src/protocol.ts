@@ -14,7 +14,12 @@ export type XvcEventType =
   | "delivery_ack"
   | "task_started"
   | "task_done"
-  | "error";
+  | "error"
+  // 控制事件（spec §7）
+  | "binding_revoked"
+  | "token_rotated_notify"
+  | "binding_metadata_updated"
+  | "server_announcement";
 
 export interface XvcEvent<T = unknown> {
   event_id: string;
@@ -160,6 +165,39 @@ export interface ErrorPayload {
   code: string;
   message: string;
   details?: unknown;
+}
+
+export interface BindingRevokedPayload {
+  binding_id: string;
+  reason:
+    | "user_unbound"
+    | "admin_revoked"
+    | "suspicious_activity"
+    | "user_account_deleted";
+  revoked_at: string;
+  message?: string;
+}
+
+export interface TokenRotatedNotifyPayload {
+  binding_id: string;
+  request_id: string;
+  initiated_by: "user" | "system";
+  grace_period_sec: number;
+}
+
+export interface BindingMetadataUpdatedPayload {
+  binding_id: string;
+  changes: {
+    device_label?: string;
+  };
+}
+
+export interface ServerAnnouncementPayload {
+  level: "info" | "warning" | "critical";
+  title: string;
+  body: string;
+  action_url?: string;
+  expires_at?: string;
 }
 
 export function isValidEvent(event: unknown): event is XvcEvent {
