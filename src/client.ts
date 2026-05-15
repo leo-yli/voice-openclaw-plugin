@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { createLogger } from "./logger.js";
 import { type XalgoVoiceConfig } from "./config.js";
 import { ReconnectManager } from "./reconnect.js";
+import type { BindingStore } from "./binding-store.js";
 import {
   parseEvent,
   createEvent,
@@ -31,13 +32,29 @@ export class XvcClient {
   private maxMissedPongs = 3;
   private status: ConnectionStatus = "disconnected";
   private events: ClientEvents;
-  private instanceId: string;
+  private instanceId: string | null;
+  private bindingStore: BindingStore;
 
-  constructor(config: XalgoVoiceConfig, events: ClientEvents) {
+  constructor(
+    config: XalgoVoiceConfig,
+    events: ClientEvents,
+    bindingStore: BindingStore
+  ) {
     this.config = config;
     this.events = events;
     this.reconnect = new ReconnectManager(config.reconnect);
-    this.instanceId = `oc_${Date.now().toString(36)}`;
+    this.instanceId = null;
+    this.bindingStore = bindingStore;
+  }
+
+  async getInstanceId(): Promise<string | null> {
+    if (this.instanceId) return this.instanceId;
+    const binding = await this.bindingStore.read();
+    if (binding) {
+      this.instanceId = binding.instanceId;
+      return this.instanceId;
+    }
+    return null;
   }
 
   get connectionStatus(): ConnectionStatus {
@@ -81,24 +98,32 @@ export class XvcClient {
   private handleOpen(): void {
     log.info("WebSocket connected");
     if (this.reconnect.shouldResume) {
-      this.sendResume();
+      this.sendResume().catch((err) => log.error("sendResume failed", err));
     } else {
-      this.sendConnect();
+      this.sendConnect().catch((err) => log.error("sendConnect failed", err));
     }
   }
 
-  private sendConnect(): void {
+  private async sendConnect(): Promise<void> {
+    const binding = await this.bindingStore.read();
+    if (!binding) {
+      log.error("No binding available, cannot connect");
+      this.setStatus("auth_failed");
+      return;
+    }
+    this.instanceId = binding.instanceId;
+
     const payload: ConnectPayload = {
       protocol_version: 1,
       client: {
         kind: "openclaw",
         plugin: "@xalgo/voice-openclaw-plugin",
         plugin_version: "0.1.0",
-        instance_id: this.instanceId,
-        device_name: "OpenClaw Instance",
+        instance_id: binding.instanceId,
+        device_name: binding.deviceLabel ?? "OpenClaw Instance",
       },
       channel: "xalgo_voice",
-      auth: { token: this.config.token },
+      auth: { token: binding.token },
       capabilities: [
         "text_message",
         "streaming_reply",
@@ -111,11 +136,16 @@ export class XvcClient {
     this.send(createEvent("connect", payload));
   }
 
-  private sendResume(): void {
+  private async sendResume(): Promise<void> {
+    const binding = await this.bindingStore.read();
+    if (!binding) {
+      this.setStatus("auth_failed");
+      return;
+    }
     const payload: ResumePayload = {
       connection_id: this.reconnect.connectionId!,
       last_event_id: this.reconnect.lastEventId!,
-      auth: { token: this.config.token },
+      auth: { token: binding.token },
     };
     this.send(createEvent("resume", payload));
   }

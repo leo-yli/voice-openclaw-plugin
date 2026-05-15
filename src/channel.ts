@@ -8,6 +8,8 @@ import { ConfirmationManager } from "./confirmation.js";
 import { InterruptHandler } from "./interrupt.js";
 import { DeliveryTracker } from "./delivery-ack.js";
 import { createLogger } from "./logger.js";
+import type { BindingStore } from "./binding-store.js";
+import { createBindingStore, type StoreAdapter } from "./binding-store.js";
 
 const log = createLogger("channel");
 
@@ -25,17 +27,24 @@ export class XalgoVoiceChannel {
   private delivery: DeliveryTracker;
   private callbacks: ChannelCallbacks | null = null;
 
-  constructor(rawConfig: Partial<XalgoVoiceConfig> & { token: string }) {
+  constructor(
+    rawConfig: Partial<XalgoVoiceConfig> & { token: string },
+    bindingStore: BindingStore
+  ) {
     this.config = resolveConfig(rawConfig);
     this.streaming = new StreamingManager();
     this.confirmation = new ConfirmationManager();
     this.interrupt = new InterruptHandler();
     this.delivery = new DeliveryTracker();
 
-    this.client = new XvcClient(this.config, {
-      onEvent: (event) => this.dispatchEvent(event),
-      onStatusChange: (status) => this.handleStatusChange(status),
-    });
+    this.client = new XvcClient(
+      this.config,
+      {
+        onEvent: (event) => this.dispatchEvent(event),
+        onStatusChange: (status) => this.handleStatusChange(status),
+      },
+      bindingStore
+    );
 
     this.interrupt.onCancelRun((messageId) => {
       this.streaming.cancelStream(messageId);
@@ -138,15 +147,24 @@ export function createInboundAdapter() {
   let channel: XalgoVoiceChannel | null = null;
 
   return {
-    async start({ config, handleMessage, handleStatus }: {
+    async start({ config, handleMessage, handleStatus, readConfig, writeConfig }: {
       config: any;
       account?: any;
       handleMessage: (msg: InboundMessage) => void;
       handleEvent?: (event: any) => void;
       handleStatus: (status: { status: string }) => void;
+      readConfig?: (key: string) => Promise<unknown>;
+      writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
       const xalgoConfig = config.channels?.xalgoVoice ?? config;
-      channel = new XalgoVoiceChannel(xalgoConfig);
+      const adapter: StoreAdapter = {
+        read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
+        write: writeConfig ?? (async () => {
+          log.warn("writeConfig not provided, binding updates will not persist");
+        }),
+      };
+      const store = createBindingStore(adapter);
+      channel = new XalgoVoiceChannel(xalgoConfig, store);
       await channel.start({ handleMessage, handleStatus });
       handleStatus({ status: "ready" });
     },
