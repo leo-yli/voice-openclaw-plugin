@@ -20,6 +20,8 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "au
 export interface ClientEvents {
   onEvent: (event: XvcEvent) => void;
   onStatusChange: (status: ConnectionStatus) => void;
+  onControlEvent?: (event: XvcEvent) => void;
+  onBindingMissing?: () => void;
 }
 
 export class XvcClient {
@@ -32,6 +34,7 @@ export class XvcClient {
   private maxMissedPongs = 3;
   private status: ConnectionStatus = "disconnected";
   private events: ClientEvents;
+  private reconnectDisabled = false;
   private instanceId: string | null;
   private bindingStore: BindingStore;
 
@@ -83,6 +86,16 @@ export class XvcClient {
       return;
     }
     this.ws.send(JSON.stringify(event));
+  }
+
+  disableReconnect(): void {
+    this.reconnectDisabled = true;
+    this.reconnect.cancel();
+  }
+
+  /** 测试用：直接派发一个 control_event，跳过 ws 层 */
+  dispatchControlEvent(event: XvcEvent): void {
+    this.events.onControlEvent?.(event);
   }
 
   disconnect(): void {
@@ -182,21 +195,32 @@ export class XvcClient {
         break;
       }
       case "error": {
-        const errPayload = event.payload as { code: string; message: string };
-        if (errPayload.code === "AUTH_FAILED") {
-          log.error("Authentication failed, stopping reconnect");
-          this.setStatus("auth_failed");
-          this.disconnect();
-          return;
-        }
-        log.error(`Server error: ${errPayload.code} - ${errPayload.message}`);
-        break;
+        this.handleErrorEvent(event.payload as { code: string; message: string });
+        return; // 不向 onEvent 广播 error
+      }
+      // control_event：不走业务 dispatchEvent，直接路由给上层
+      case "binding_revoked":
+      case "token_rotated_notify":
+      case "binding_metadata_updated":
+      case "server_announcement": {
+        this.events.onControlEvent?.(event);
+        return; // 不再调用通用 events.onEvent
       }
       default:
         break;
     }
 
     this.events.onEvent(event);
+  }
+
+  private handleErrorEvent(errPayload: { code: string; message: string }): void {
+    if (errPayload.code === "AUTH_FAILED") {
+      log.error(`Authentication failed: ${errPayload.message}, stopping reconnect`);
+      this.setStatus("auth_failed");
+      this.disconnect();
+      return;
+    }
+    log.error(`Server error: ${errPayload.code} - ${errPayload.message}`);
   }
 
   private handleClose(code: number, reason: string): void {
@@ -236,6 +260,10 @@ export class XvcClient {
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectDisabled) {
+      log.info("Reconnect disabled, skipping");
+      return;
+    }
     log.info(`Scheduling reconnect in ${this.reconnect.nextDelay()}ms`);
     this.reconnect.schedule(() => this.connect());
   }
