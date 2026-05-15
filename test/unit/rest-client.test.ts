@@ -112,3 +112,70 @@ describe("RestClient.exchange", () => {
     ).rejects.toMatchObject({ type: "network_error" });
   });
 });
+
+describe("RestClient.rotate", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("returns new token on 200", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ channel_token: "xvc_live_new", token_prefix: "xvc_live_n", rotated_at: "2026-05-15T00:00:00Z" }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    );
+    const client = createRestClient("https://api.example.com");
+    const result = await client.rotate("old", "oc_uuid");
+    expect(result.channelToken).toBe("xvc_live_new");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/rotate");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer old");
+    expect((init.headers as Record<string, string>)["x-instance-id"]).toBe("oc_uuid");
+  });
+
+  it("throws auth_failed on 401", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ type: "auth_failed" }), { status: 401 })
+    );
+    const client = createRestClient("https://api.example.com");
+    await expect(client.rotate("bad", "oc_uuid")).rejects.toMatchObject({ type: "auth_failed" });
+  });
+});
+
+describe("RestClient.unbind", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("resolves silently on 204", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createRestClient("https://api.example.com");
+    await expect(client.unbind("t", "oc_uuid")).resolves.toBeUndefined();
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/me");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("throws on 401", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ type: "auth_failed" }), { status: 401 })
+    );
+    const client = createRestClient("https://api.example.com");
+    await expect(client.unbind("bad", "oc_uuid")).rejects.toMatchObject({ type: "auth_failed" });
+  });
+});
