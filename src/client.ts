@@ -195,7 +195,7 @@ export class XvcClient {
         break;
       }
       case "error": {
-        this.handleErrorEvent(event.payload as { code: string; message: string });
+        this.handleErrorEvent(event.payload as { code: string; message: string; reason?: string });
         return; // 不向 onEvent 广播 error
       }
       // control_event：不走业务 dispatchEvent，直接路由给上层
@@ -213,10 +213,36 @@ export class XvcClient {
     this.events.onEvent(event);
   }
 
-  private handleErrorEvent(errPayload: { code: string; message: string }): void {
+  private handleErrorEvent(errPayload: {
+    code: string;
+    message: string;
+    reason?: string;
+  }): void {
     if (errPayload.code === "AUTH_FAILED") {
-      log.error(`Authentication failed: ${errPayload.message}, stopping reconnect`);
+      const reason = errPayload.reason ?? "token_invalid";
+      log.error(`Authentication failed: reason=${reason}, message=${errPayload.message}`);
       this.setStatus("auth_failed");
+      this.disableReconnect();
+
+      if (reason === "instance_mismatch") {
+        // 上抛为 control event，触发上层风控（清 binding + 告警）
+        const synth = createEvent("binding_revoked", {
+          binding_id: "unknown",
+          reason: "suspicious_activity",
+          revoked_at: new Date().toISOString(),
+          message: errPayload.message,
+        });
+        this.events.onControlEvent?.(synth);
+      } else if (reason === "binding_revoked" || reason === "token_invalid") {
+        const synth = createEvent("binding_revoked", {
+          binding_id: "unknown",
+          reason: "user_unbound",
+          revoked_at: new Date().toISOString(),
+          message: errPayload.message,
+        });
+        this.events.onControlEvent?.(synth);
+      }
+
       this.disconnect();
       return;
     }
