@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from "ws";
-import { createEvent, type XvcEvent, type ConnectedPayload } from "../../src/protocol.js";
+import { createEvent, type XvcEvent, type ConnectedPayload, type BindingRevokedPayload } from "../../src/protocol.js";
 
 export interface MockServerOptions {
   port?: number;
@@ -79,6 +79,38 @@ export class MockXalgoServer {
       text,
       metadata: { input_type: "voice", language: "zh-CN", asr_confidence: 0.95 },
     }));
+  }
+
+  pushBindingRevoked(
+    bindingId: string = "b_test",
+    reason: BindingRevokedPayload["reason"] = "user_unbound"
+  ): void {
+    this.sendToAll(
+      createEvent("binding_revoked", {
+        binding_id: bindingId,
+        reason,
+        revoked_at: new Date().toISOString(),
+      })
+    );
+  }
+
+  pushTokenRotatedNotify(bindingId: string = "b_test"): void {
+    this.sendToAll(
+      createEvent("token_rotated_notify", {
+        binding_id: bindingId,
+        request_id: `req_${Date.now()}`,
+        initiated_by: "user",
+        grace_period_sec: 60,
+      })
+    );
+  }
+
+  closeConnection(code: number = 1000, reason: string = "test close"): void {
+    for (const client of this.clients) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.close(code, reason);
+      }
+    }
   }
 
   private handleMessage(ws: WebSocket, raw: string): void {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { MockXalgoServer } from "./mock-server.js";
 import { XalgoVoiceChannel } from "../../src/channel.js";
 import type { InboundMessage } from "../../src/inbound.js";
+import { createBindingStore } from "../../src/binding-store.js";
 
 describe("integration: message flow", () => {
   let server: MockXalgoServer;
@@ -18,10 +19,21 @@ describe("integration: message flow", () => {
   it("receives inbound message from Xalgo", async () => {
     const messages: InboundMessage[] = [];
 
+    const memory1: Record<string, unknown> = {
+      "channels.xalgoVoice.token": "valid_token",
+      "channels.xalgoVoice.instanceId": "oc_test_instance",
+      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgoVoice.boundUserId": "u_test",
+    };
+    const store1 = createBindingStore({
+      read: async (k) => memory1[k],
+      write: async (k, v) => { memory1[k] = v; },
+    });
+
     const channel = new XalgoVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
-    });
+    }, store1);
 
     await channel.start({
       handleMessage: (msg) => messages.push(msg),
@@ -42,11 +54,22 @@ describe("integration: message flow", () => {
   });
 
   it("sends outbound reply to Xalgo", async () => {
+    const memory2: Record<string, unknown> = {
+      "channels.xalgoVoice.token": "valid_token",
+      "channels.xalgoVoice.instanceId": "oc_test_instance",
+      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgoVoice.boundUserId": "u_test",
+    };
+    const store2 = createBindingStore({
+      read: async (k) => memory2[k],
+      write: async (k, v) => { memory2[k] = v; },
+    });
+
     const channel = new XalgoVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
       streaming: false,
-    });
+    }, store2);
 
     await channel.start({
       handleMessage: () => {},

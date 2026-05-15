@@ -20,6 +20,14 @@ export interface XalgoVoiceConfig {
   replyMode: "voice_first" | "text_first" | "both";
   riskPolicy: RiskPolicy;
   reconnect: ReconnectConfig;
+
+  // 绑定相关字段（spec §4.3）
+  apiBaseUrl: string;
+  instanceId: string;
+  deviceLabel: string;
+  boundAt: string;
+  boundUserId: string;
+  boundUserName: string;
 }
 
 export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
@@ -39,6 +47,12 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
     maxDelayMs: 30000,
     resume: true,
   },
+  apiBaseUrl: "https://channel.xalgo.ai",
+  instanceId: "",
+  deviceLabel: "",
+  boundAt: "",
+  boundUserId: "",
+  boundUserName: "",
 };
 
 export function resolveConfig(raw: Partial<XalgoVoiceConfig> & { token: string }): XalgoVoiceConfig {

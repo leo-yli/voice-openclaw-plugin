@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { createLogger } from "./logger.js";
 import { type XalgoVoiceConfig } from "./config.js";
 import { ReconnectManager } from "./reconnect.js";
+import type { BindingStore } from "./binding-store.js";
 import {
   parseEvent,
   createEvent,
@@ -19,6 +20,8 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "au
 export interface ClientEvents {
   onEvent: (event: XvcEvent) => void;
   onStatusChange: (status: ConnectionStatus) => void;
+  onControlEvent?: (event: XvcEvent) => void;
+  onBindingMissing?: () => void;
 }
 
 export class XvcClient {
@@ -31,13 +34,30 @@ export class XvcClient {
   private maxMissedPongs = 3;
   private status: ConnectionStatus = "disconnected";
   private events: ClientEvents;
-  private instanceId: string;
+  private reconnectDisabled = false;
+  private instanceId: string | null;
+  private bindingStore: BindingStore;
 
-  constructor(config: XalgoVoiceConfig, events: ClientEvents) {
+  constructor(
+    config: XalgoVoiceConfig,
+    events: ClientEvents,
+    bindingStore: BindingStore
+  ) {
     this.config = config;
     this.events = events;
     this.reconnect = new ReconnectManager(config.reconnect);
-    this.instanceId = `oc_${Date.now().toString(36)}`;
+    this.instanceId = null;
+    this.bindingStore = bindingStore;
+  }
+
+  async getInstanceId(): Promise<string | null> {
+    if (this.instanceId) return this.instanceId;
+    const binding = await this.bindingStore.read();
+    if (binding) {
+      this.instanceId = binding.instanceId;
+      return this.instanceId;
+    }
+    return null;
   }
 
   get connectionStatus(): ConnectionStatus {
@@ -68,6 +88,16 @@ export class XvcClient {
     this.ws.send(JSON.stringify(event));
   }
 
+  disableReconnect(): void {
+    this.reconnectDisabled = true;
+    this.reconnect.cancel();
+  }
+
+  /** 测试用：直接派发一个 control_event，跳过 ws 层 */
+  dispatchControlEvent(event: XvcEvent): void {
+    this.events.onControlEvent?.(event);
+  }
+
   disconnect(): void {
     this.reconnect.cancel();
     this.stopHeartbeat();
@@ -81,24 +111,32 @@ export class XvcClient {
   private handleOpen(): void {
     log.info("WebSocket connected");
     if (this.reconnect.shouldResume) {
-      this.sendResume();
+      this.sendResume().catch((err) => log.error("sendResume failed", err));
     } else {
-      this.sendConnect();
+      this.sendConnect().catch((err) => log.error("sendConnect failed", err));
     }
   }
 
-  private sendConnect(): void {
+  private async sendConnect(): Promise<void> {
+    const binding = await this.bindingStore.read();
+    if (!binding) {
+      log.error("No binding available, cannot connect");
+      this.setStatus("auth_failed");
+      return;
+    }
+    this.instanceId = binding.instanceId;
+
     const payload: ConnectPayload = {
       protocol_version: 1,
       client: {
         kind: "openclaw",
         plugin: "@xalgo/voice-openclaw-plugin",
         plugin_version: "0.1.0",
-        instance_id: this.instanceId,
-        device_name: "OpenClaw Instance",
+        instance_id: binding.instanceId,
+        device_name: binding.deviceLabel ?? "OpenClaw Instance",
       },
       channel: "xalgo_voice",
-      auth: { token: this.config.token },
+      auth: { token: binding.token },
       capabilities: [
         "text_message",
         "streaming_reply",
@@ -111,11 +149,16 @@ export class XvcClient {
     this.send(createEvent("connect", payload));
   }
 
-  private sendResume(): void {
+  private async sendResume(): Promise<void> {
+    const binding = await this.bindingStore.read();
+    if (!binding) {
+      this.setStatus("auth_failed");
+      return;
+    }
     const payload: ResumePayload = {
       connection_id: this.reconnect.connectionId!,
       last_event_id: this.reconnect.lastEventId!,
-      auth: { token: this.config.token },
+      auth: { token: binding.token },
     };
     this.send(createEvent("resume", payload));
   }
@@ -152,21 +195,58 @@ export class XvcClient {
         break;
       }
       case "error": {
-        const errPayload = event.payload as { code: string; message: string };
-        if (errPayload.code === "AUTH_FAILED") {
-          log.error("Authentication failed, stopping reconnect");
-          this.setStatus("auth_failed");
-          this.disconnect();
-          return;
-        }
-        log.error(`Server error: ${errPayload.code} - ${errPayload.message}`);
-        break;
+        this.handleErrorEvent(event.payload as { code: string; message: string; reason?: string });
+        return; // 不向 onEvent 广播 error
+      }
+      // control_event：不走业务 dispatchEvent，直接路由给上层
+      case "binding_revoked":
+      case "token_rotated_notify":
+      case "binding_metadata_updated":
+      case "server_announcement": {
+        this.events.onControlEvent?.(event);
+        return; // 不再调用通用 events.onEvent
       }
       default:
         break;
     }
 
     this.events.onEvent(event);
+  }
+
+  private handleErrorEvent(errPayload: {
+    code: string;
+    message: string;
+    reason?: string;
+  }): void {
+    if (errPayload.code === "AUTH_FAILED") {
+      const reason = errPayload.reason ?? "token_invalid";
+      log.error(`Authentication failed: reason=${reason}, message=${errPayload.message}`);
+      this.setStatus("auth_failed");
+      this.disableReconnect();
+
+      if (reason === "instance_mismatch") {
+        // 上抛为 control event，触发上层风控（清 binding + 告警）
+        const synth = createEvent("binding_revoked", {
+          binding_id: "unknown",
+          reason: "suspicious_activity",
+          revoked_at: new Date().toISOString(),
+          message: errPayload.message,
+        });
+        this.events.onControlEvent?.(synth);
+      } else if (reason === "binding_revoked" || reason === "token_invalid") {
+        const synth = createEvent("binding_revoked", {
+          binding_id: "unknown",
+          reason: "user_unbound",
+          revoked_at: new Date().toISOString(),
+          message: errPayload.message,
+        });
+        this.events.onControlEvent?.(synth);
+      }
+
+      this.disconnect();
+      return;
+    }
+    log.error(`Server error: ${errPayload.code} - ${errPayload.message}`);
   }
 
   private handleClose(code: number, reason: string): void {
@@ -206,6 +286,10 @@ export class XvcClient {
   }
 
   private scheduleReconnect(): void {
+    if (this.reconnectDisabled) {
+      log.info("Reconnect disabled, skipping");
+      return;
+    }
     log.info(`Scheduling reconnect in ${this.reconnect.nextDelay()}ms`);
     this.reconnect.schedule(() => this.connect());
   }
