@@ -3,11 +3,13 @@ import os from "node:os";
 import { createBindingStore, type StoreAdapter } from "./src/binding-store.js";
 import { createRestClient, ExchangeError, type ExchangeErrorType } from "./src/rest-client.js";
 import { createLogger } from "./src/logger.js";
+import { DEFAULT_CONFIG } from "./src/config.js";
 
 const log = createLogger("setup");
 
 const PLUGIN_VERSION = "0.1.0";
-const DEFAULT_API_BASE_URL = "https://channel.xalgo.ai";
+/** API Server 默认地址，与运行时配置 (DEFAULT_CONFIG.apiBaseUrl) 共用同一个 source of truth */
+const DEFAULT_API_BASE_URL = DEFAULT_CONFIG.apiBaseUrl;
 const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
 // Base32 字符集 - 0/O/1/I/L/S/2/Z，再去掉 U/W 防混淆
 
