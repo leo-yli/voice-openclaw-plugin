@@ -1,4 +1,4 @@
-import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, DeliveryAckPayload } from "./protocol.js";
+import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
 import { type XalgoVoiceConfig, resolveConfig } from "./config.js";
 import { XvcClient, type ConnectionStatus } from "./client.js";
 import { parseInboundMessage, type InboundMessage } from "./inbound.js";
@@ -10,6 +10,8 @@ import { DeliveryTracker } from "./delivery-ack.js";
 import { createLogger } from "./logger.js";
 import type { BindingStore } from "./binding-store.js";
 import { createBindingStore, type StoreAdapter } from "./binding-store.js";
+import { createControlEventHandler, type ControlEventHandler } from "./control-events.js";
+import { createRestClient, type RestClient } from "./rest-client.js";
 
 const log = createLogger("channel");
 
@@ -26,22 +28,38 @@ export class XalgoVoiceChannel {
   private interrupt: InterruptHandler;
   private delivery: DeliveryTracker;
   private callbacks: ChannelCallbacks | null = null;
+  private bindingStore: BindingStore;
+  private restClient: RestClient;
+  private controlEvents: ControlEventHandler;
 
   constructor(
     rawConfig: Partial<XalgoVoiceConfig> & { token: string },
     bindingStore: BindingStore
   ) {
     this.config = resolveConfig(rawConfig);
+    this.bindingStore = bindingStore;
+    this.restClient = createRestClient(this.config.apiBaseUrl);
     this.streaming = new StreamingManager();
     this.confirmation = new ConfirmationManager();
     this.interrupt = new InterruptHandler();
     this.delivery = new DeliveryTracker();
+
+    this.controlEvents = createControlEventHandler({
+      bindingStore: this.bindingStore,
+      restClient: this.restClient,
+      onBindingLost: (reason) => {
+        log.warn(`Binding lost: ${reason}`);
+        this.callbacks?.handleStatus({ status: "unbound" });
+      },
+      disableReconnect: () => this.client.disableReconnect(),
+    });
 
     this.client = new XvcClient(
       this.config,
       {
         onEvent: (event) => this.dispatchEvent(event),
         onStatusChange: (status) => this.handleStatusChange(status),
+        onControlEvent: (event) => this.dispatchControlEvent(event),
       },
       bindingStore
     );
@@ -140,6 +158,33 @@ export class XalgoVoiceChannel {
 
   private handleStatusChange(status: ConnectionStatus): void {
     this.callbacks?.handleStatus({ status });
+  }
+
+  private dispatchControlEvent(event: XvcEvent): void {
+    switch (event.type) {
+      case "binding_revoked":
+        this.controlEvents
+          .handleBindingRevoked(event.payload as BindingRevokedPayload, event.event_id)
+          .catch((err) => log.error("handleBindingRevoked failed", err));
+        break;
+      case "token_rotated_notify":
+        this.controlEvents
+          .handleTokenRotatedNotify(event.payload as TokenRotatedNotifyPayload, event.event_id)
+          .catch((err) => log.error("handleTokenRotatedNotify failed", err));
+        break;
+      case "binding_metadata_updated":
+        this.controlEvents
+          .handleMetadataUpdated(event.payload as BindingMetadataUpdatedPayload, event.event_id)
+          .catch((err) => log.error("handleMetadataUpdated failed", err));
+        break;
+      case "server_announcement":
+        this.controlEvents
+          .handleAnnouncement(event.payload as ServerAnnouncementPayload, event.event_id)
+          .catch((err) => log.error("handleAnnouncement failed", err));
+        break;
+      default:
+        log.warn(`Unknown control event type: ${event.type}`);
+    }
   }
 }
 
