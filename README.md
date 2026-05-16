@@ -20,28 +20,35 @@ Xalgo Glasses → Pupa Cloud (ASR/TTS) → Xalgo Voice Channel Server
 
 > **前置要求**：OpenClaw `>= 2026.3.28`、Node.js `>= 20`（推荐 Node 22+，可去掉 JSON import 的 experimental warning）
 
-四步装好并接入 Xalgo Voice channel：
+三步走：**装插件** → **绑定** → **重启**。
 
-### 1️⃣ 在 OpenClaw 主机上拉取仓库
+### 1️⃣ 装插件
+
+#### 方式 A（推荐 ✅）：从 npm 仓库直接装
+
+最干净，一条命令搞定。
+
+```bash
+openclaw plugins install @xalgo/voice-openclaw-plugin
+```
+
+> ⏳ **包发布在即**——发布完成前请用方式 B。后面所有命令保持一致。
+
+#### 方式 B：从 GitHub clone 安装
+
+适合 npm 包未发布、需要锁定到具体 commit、或者本地有改动要调试的场景。
 
 ```bash
 cd ~
 git clone https://github.com/leo-yli/voice-openclaw-plugin.git
 cd voice-openclaw-plugin
 npm install                  # prepare 钩子会自动 tsc 编译出 dist/
+openclaw plugins install .   # ★ 是 . 不是 ./dist，OpenClaw 要读 package.json
 ```
 
-> ⚠️ **`openclaw plugins install` 不接受 URL 形式**（实测会报 `unsupported npm spec: URLs are not allowed`）。所以必须先在 OpenClaw 主机本地 clone。
+> ⚠️ **`openclaw plugins install` 不接受 URL 形式**（实测会报 `unsupported npm spec: URLs are not allowed`），所以不能 `openclaw plugins install git+https://...`。必须先在本地 clone 再 install `.`。
 
-### 2️⃣ 把当前目录注册为 OpenClaw 插件
-
-```bash
-openclaw plugins install .
-```
-
-> ⚠️ **是 `.`，不是 `./dist`**——OpenClaw 要读 `package.json` 的 `openclaw` 字段做插件发现。
-
-### 3️⃣ 跑 OpenClaw 自带的 channel 配置向导
+### 2️⃣ 跑 OpenClaw 自带的 channel 配置向导
 
 ```bash
 openclaw channels add
@@ -53,7 +60,7 @@ openclaw channels add
 
 > 这是 OpenClaw 推荐的标准 setup 路径——和企业微信 (`@wecom/wecom-openclaw-plugin`) 用同样机制（[`ChannelSetupWizard`](https://github.com/WecomTeam/wecom-openclaw-plugin/blob/main/src/onboarding.ts)）。
 
-### 4️⃣ 重启 OpenClaw 让 channel 加载新配置
+### 3️⃣ 重启 OpenClaw 让 channel 加载新配置
 
 ```bash
 openclaw gateway restart      # 或对应的 systemctl / supervisor 命令
@@ -88,6 +95,15 @@ openclaw gateway restart      # 或对应的 systemctl / supervisor 命令
 
 ## 升级
 
+#### 如果用方式 A（npm）装的
+
+```bash
+openclaw plugins update @xalgo/voice-openclaw-plugin    # 或重新 install 同名包
+openclaw gateway restart
+```
+
+#### 如果用方式 B（GitHub clone）装的
+
 ```bash
 cd ~/voice-openclaw-plugin
 git pull
@@ -101,9 +117,9 @@ openclaw gateway restart
 
 ## 备用安装方式
 
-> 99% 场景下用上面的「快速开始」就行。下面是特殊环境的备选。
+> 99% 场景下用上面「快速开始」的方式 A / B 就行。下面是特殊环境的备选。
 
-### B. npm pack tarball（无 git 但能 scp 的环境）
+### C. npm pack tarball（无 git 但能 scp 的环境）
 
 ```bash
 # 开发机 / CI 上：
@@ -114,7 +130,7 @@ cd voice-openclaw-plugin && npm install && npm pack
 openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
 ```
 
-### C. 离线手动复制到 extensions 目录
+### D. 离线手动复制到 extensions 目录
 
 只在完全不能跑 `openclaw plugins install` 时用：
 
@@ -133,12 +149,6 @@ openclaw gateway restart
 ```
 
 ⚠️ 这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`，**需要在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 里手动加上 `xalgo_voice`** 才能被信任执行。
-
-### D. 通过 npm 公共仓库（待发布）
-
-```bash
-openclaw plugins install @xalgo/voice-openclaw-plugin
-```
 
 **目前未发布到 npm**，暂用上面其它方式。
 
