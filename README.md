@@ -24,6 +24,8 @@ Xalgo Glasses → Pupa Cloud (ASR/TTS) → Xalgo Voice Channel Server
 
 ### 1️⃣ 装插件
 
+四种方式按场景任选其一（推荐度从高到低）。
+
 #### 方式 A（推荐 ✅）：从 npm 仓库直接装
 
 最干净，一条命令搞定。
@@ -47,6 +49,38 @@ openclaw plugins install .   # ★ 是 . 不是 ./dist，OpenClaw 要读 package
 ```
 
 > ⚠️ **`openclaw plugins install` 不接受 URL 形式**（实测会报 `unsupported npm spec: URLs are not allowed`），所以不能 `openclaw plugins install git+https://...`。必须先在本地 clone 再 install `.`。
+
+#### 方式 C：分发 tarball（CI / scp 场景）
+
+适合开发机和 OpenClaw 主机不通网络但能 scp 的环境。
+
+```bash
+# 开发机 / CI 上：
+cd voice-openclaw-plugin && npm install && npm pack
+# → 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
+
+# OpenClaw 主机上：
+openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
+```
+
+#### 方式 D：离线手动复制到 extensions 目录（断网兜底）
+
+只在完全不能跑 `openclaw plugins install` 时用。
+
+```bash
+# 在能联网的机器：build + 打包 production 依赖
+cd voice-openclaw-plugin && npm install && npm run build
+npm install --omit=dev
+tar czf plugin.tar.gz dist node_modules endpoints.json openclaw.plugin.json package.json README.md
+
+# 推到 OpenClaw 主机解压
+scp plugin.tar.gz root@<host>:/tmp/
+ssh root@<host>
+mkdir -p ~/.openclaw/extensions/xalgo_voice
+tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
+```
+
+> ⚠️ 这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`，**需要手动在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 里加上 `xalgo_voice`** 才能被信任执行。
 
 ### 2️⃣ 跑 OpenClaw 自带的 channel 配置向导
 
@@ -73,23 +107,14 @@ openclaw gateway restart      # 或对应的 systemctl / supervisor 命令
 [plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
 ```
 
+也可以验证一下：
+
+```bash
+openclaw plugins list | grep xalgo         # 看到 xalgo_voice 一行
+openclaw plugins inspect xalgo_voice       # Shape: plain-capability, Capabilities: channel: xalgo_voice
+```
+
 ✅ 接入完成。对 Xalgo 眼镜说话即可触发 OpenClaw Agent。
-
----
-
-## 验证 / 排错
-
-| 检查 | 命令 | 期望 |
-|---|---|---|
-| 插件是否被识别 | `openclaw plugins list \| grep xalgo` | 看到 `xalgo_voice` 一行 |
-| 插件细节 | `openclaw plugins inspect xalgo_voice` | `Shape: plain-capability` + `Capabilities: channel: xalgo_voice` |
-| 配置是否写入 | `cat ~/.openclaw/openclaw.json \| grep -A 5 xalgo_voice` | 看到 `token` 等字段 |
-
-常见错误：
-
-- **`plugin already exists` 在 install 时报**：之前装过，先 `rm -rf ~/.openclaw/extensions/xalgo_voice` 再 install
-- **`Also not a valid hook pack: package.json missing openclaw.hooks`**：fallback 解析尝试失败的无害提示，可忽略
-- **`Plugin manifest id "xalgo_voice" differs from npm package name`**：cosmetic 警告，不影响功能（OpenClaw 用 manifest id 作 config key）
 
 ---
 
@@ -113,44 +138,7 @@ openclaw plugins install .
 openclaw gateway restart
 ```
 
----
-
-## 备用安装方式
-
-> 99% 场景下用上面「快速开始」的方式 A / B 就行。下面是特殊环境的备选。
-
-### C. npm pack tarball（无 git 但能 scp 的环境）
-
-```bash
-# 开发机 / CI 上：
-cd voice-openclaw-plugin && npm install && npm pack
-# → 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
-
-# OpenClaw 主机上：
-openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
-```
-
-### D. 离线手动复制到 extensions 目录
-
-只在完全不能跑 `openclaw plugins install` 时用：
-
-```bash
-# 在能联网的机器：build 并打包
-cd voice-openclaw-plugin && npm install && npm run build
-npm install --omit=dev
-tar czf plugin.tar.gz dist node_modules endpoints.json openclaw.plugin.json package.json README.md
-
-# 推到 OpenClaw 主机并解压
-scp plugin.tar.gz root@<host>:/tmp/
-ssh root@<host>
-mkdir -p ~/.openclaw/extensions/xalgo_voice
-tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
-openclaw gateway restart
-```
-
-⚠️ 这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`，**需要在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 里手动加上 `xalgo_voice`** 才能被信任执行。
-
-**目前未发布到 npm**，暂用上面其它方式。
+> 用方式 C / D 装的：拿到新版 tarball / tar.gz 后，先 `rm -rf ~/.openclaw/extensions/xalgo_voice`，再重新走对应安装步骤即可。
 
 ---
 
