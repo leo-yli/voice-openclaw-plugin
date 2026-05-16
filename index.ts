@@ -1,5 +1,9 @@
 import type { OpenClawApi } from "openclaw";
 import { createInboundAdapter, outbound } from "./src/channel.js";
+import {
+  xalgoVoiceSetupWizard,
+  xalgoVoiceSetupAdapter,
+} from "./src/onboarding.js";
 
 /**
  * OpenClaw plugin entry.
@@ -49,7 +53,12 @@ const plugin = {
         },
         outbound,
         inbound: createInboundAdapter(),
-      },
+        // ★ 关键：声明式 setup wizard，'openclaw channels add' 命令会用
+        //   到这两个字段来 prompt 用户输入 8 位绑定码并完成 exchange。
+        //   参考 wecom-openclaw-plugin 的同款实现方式。
+        setupWizard: xalgoVoiceSetupWizard,
+        setup: xalgoVoiceSetupAdapter,
+      } as any,
     });
 
     // 检测是否已绑定，没绑定时打印醒目提示（每次 OpenClaw 启动都提醒一次）

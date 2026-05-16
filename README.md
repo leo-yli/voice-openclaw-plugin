@@ -152,38 +152,44 @@ openclaw plugins list | grep xalgo-voice
 
 打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
 
-### 2. 跑绑定向导 CLI
+### 2. 跑绑定向导
 
-> OpenClaw 自身的 `plugins install` 命令不会启动绑定流程，需要单独跑本插件提供的 `xalgo-bind` 命令。
+两种方式任选其一。
 
-**方式 A：用项目目录直接跑（最稳）**
+#### 方式 A（推荐 ✅）：`openclaw channels add`
+
+OpenClaw 自带的 channel 添加向导。它会发现已注册的 channel，调用插件声明的 `setupWizard`，自动 prompt 用户输入 8 位绑定码：
 
 ```bash
-cd ~/voice-openclaw-plugin
-node dist/bin/xalgo-bind.js
+openclaw channels add
+# 选择 Xalgo Voice (语音)
+# ↑ 自动 prompt 8 位绑定码 → 自动 exchange 拿 Token → 写入 OpenClaw 配置
 ```
 
-**方式 B：用 OpenClaw 安装位置的绝对路径**
+这与企业微信 (`@wecom/wecom-openclaw-plugin`) 用同样的机制，是 OpenClaw 推荐的标准 setup 方式。
+
+#### 方式 B（fallback）：独立 CLI `xalgo-bind`
+
+如果 OpenClaw 版本不支持 setupWizard、或者你需要脚本化绑定流程，可以跑独立 CLI：
 
 ```bash
+# OpenClaw 安装位置（推荐）
 node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+
+# 或者从源码目录
+cd ~/voice-openclaw-plugin && node dist/bin/xalgo-bind.js
 ```
 
-**方式 C：如果你把插件目录加到 PATH** 或者 `npm link` 过，直接：
+> 💡 别名：在 `~/.bashrc` 加 `alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js'`，之后绑定就是 `xalgo-bind` 一条命令。
 
-```bash
-xalgo-bind
-```
+#### 向导流程（两种方式都一样）
 
-向导会引导：
-
-1. 检测是否已绑定，若有则提示「保持现状 / 重新绑定 / 解绑」
+1. 检测是否已绑定（已绑则提示保持/重新绑定/解绑）
 2. 自动生成 / 复用 `instance_id`（设备 UUID）
 3. 输入 8 位绑定码（不区分大小写）
-4. 输入 API Server 地址（默认值来自项目根 `endpoints.json`，**当前测试期：`https://asr-test.jlpay.com`**）
+4. 调 exchange 接口换长期 Channel Token
 5. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
 6. 自动写入 `~/.openclaw/openclaw.json` 的 `channels.xalgo_voice.*` 字段
-7. 提示重启 OpenClaw 让插件加载新配置
 
 ### 3. 重启 OpenClaw 让 channel 生效
 
