@@ -42,15 +42,36 @@ npm run build
 openclaw plugins install .
 ```
 
-升级时：
+升级时（**关键：先删旧的，OpenClaw 不会自动覆盖**）：
 
 ```bash
 cd ~/voice-openclaw-plugin
 git pull
 npm install   # 如有 dependencies 变化
 npm run build
-openclaw plugins install .   # 重新装一遍即可
+
+# 删除已存在的旧版本（用 plugin manifest id "xalgo_voice"，不是 npm 包名）
+rm -rf ~/.openclaw/extensions/xalgo_voice
+
+# 重新安装
+openclaw plugins install .
 ```
+
+> 💡 OpenClaw 用 `openclaw.plugin.json` 的 `id` 字段（即 `xalgo_voice`，snake_case）作为插件目录名 / config key，不是 npm 包名 `@xalgo/voice-openclaw-plugin`。卸载或操作目录时都用这个 id。
+
+### 常见错误：`plugin already exists`
+
+```
+plugin already exists: /root/.openclaw/extensions/xalgo_voice (delete it first)
+```
+
+OpenClaw 拒绝覆盖已存在的同名插件，按上面"升级"流程先 `rm -rf` 再装即可。安装过程中可能还会看到：
+
+```
+Also not a valid hook pack: Error: package.json missing openclaw.hooks
+```
+
+这是 OpenClaw 把它当 hook pack 解析失败的 fallback 提示，无害，可忽略。
 
 ### 方式二：npm pack 后装 tarball（适合无 git 但有 tarball 的环境）
 
