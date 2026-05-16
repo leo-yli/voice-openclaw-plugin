@@ -18,21 +18,77 @@ Xalgo Glasses → Pupa Cloud (ASR/TTS) → Xalgo Voice Channel Server
 
 ## 安装
 
-### 通过 npm（推荐）
+> **要求**：Node.js ≥ 20（推荐 Node 22+，去除 JSON import 的 experimental warning）
+
+按推荐度由高到低，**四种方式任选其一**：
+
+### 方式一：通过 GitHub 仓库直接安装（当前推荐 ✅）
+
+仓库还未发布到 npm 公共仓库时使用，**最稳的安装方式**。npm 原生支持 git URL 安装，且本项目的 `package.json` 配置了 `prepare` 钩子，会在安装时自动跑 `tsc` 完成编译，所以**不需要本地 clone**。
+
+```bash
+# HTTPS（任何 git 主机皆可访问）
+openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git
+
+# 锁定到某个 tag / commit / 分支
+openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#v0.1.0
+openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#master
+openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#<commit-sha>
+
+# SSH（适合私有仓库 / 已配 SSH key 的环境）
+openclaw plugins install git+ssh://git@github.com/leo-yli/voice-openclaw-plugin.git
+```
+
+安装时 npm 会自动：
+
+1. clone 仓库到临时目录
+2. `npm install` 装齐 devDependencies（含 typescript）
+3. 触发 `prepare` 钩子 → `tsc` 编译生成 `dist/`
+4. 把含 `dist/` 的目录复制到 OpenClaw 的插件位置
+
+如果需要升级，重新跑同样命令即可（npm 会拉最新 commit 重编译）。
+
+### 方式二：通过 npm 公共仓库（待发布后启用）
 
 ```bash
 openclaw plugins install @xalgo/voice-openclaw-plugin
 ```
 
-### 本地安装
+**目前包尚未发布到 npm**，请暂用方式一。
+
+### 方式三：本地 clone + 安装（适合本地修改开发）
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/leo-yli/voice-openclaw-plugin.git
 cd voice-openclaw-plugin
 npm install
-npm run build
-openclaw plugins install ./dist
+npm run build                     # 生成 dist/
+openclaw plugins install .        # 注意是 . 不是 ./dist，让 OpenClaw 读到 package.json 的 openclaw 字段
 ```
+
+修改源码后重新跑 `npm run build` + `openclaw plugins install .` 即可。
+
+### 方式四：通过 GitHub Release tarball（断网 / 离线场景）
+
+如果作者发布了 Release，下载 `.tgz` 后离线安装：
+
+```bash
+# 在线下载
+curl -L -o voice-openclaw-plugin.tgz https://github.com/leo-yli/voice-openclaw-plugin/releases/download/v0.1.0/xalgo-voice-openclaw-plugin-0.1.0.tgz
+
+# 本地安装
+openclaw plugins install ./voice-openclaw-plugin.tgz
+```
+
+> 也可以直接：`openclaw plugins install https://github.com/leo-yli/voice-openclaw-plugin/releases/download/v0.1.0/xalgo-voice-openclaw-plugin-0.1.0.tgz`
+
+### 验证安装
+
+```bash
+openclaw plugins list | grep xalgo-voice
+```
+
+应该看到 `@xalgo/voice-openclaw-plugin v0.1.0`。
 
 ## 配置
 

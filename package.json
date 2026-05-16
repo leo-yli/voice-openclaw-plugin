@@ -10,8 +10,15 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare": "tsc"
   },
+  "files": [
+    "dist",
+    "endpoints.json",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
   "openclaw": {
     "extensions": ["./dist/index.js"],
     "setupEntry": "./dist/setup-entry.js",
