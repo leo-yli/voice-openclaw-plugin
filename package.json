@@ -17,13 +17,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepare": "tsc && node scripts/postbuild.mjs"
+    "prepare": "tsc && node scripts/postbuild.mjs",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "bin": {
     "xalgo-bind": "./dist/bin/xalgo-bind.js"
   },
   "files": [
     "dist",
+    "scripts",
     "endpoints.json",
     "openclaw.plugin.json",
     "README.md"

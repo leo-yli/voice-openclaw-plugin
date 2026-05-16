@@ -51,7 +51,63 @@ const plugin = {
         inbound: createInboundAdapter(),
       },
     });
+
+    // 检测是否已绑定，没绑定时打印醒目提示（每次 OpenClaw 启动都提醒一次）
+    warnIfUnbound(api);
   },
 };
+
+/**
+ * 探测 OpenClaw config 里是否已写入 channels.xalgo_voice.token。
+ * 没写入说明 setup 流程没跑完，提示用户运行 xalgo-bind。
+ *
+ * 用 api.runtime?.getConfig 优先；如果不存在退化到读 ~/.openclaw/openclaw.json。
+ */
+function warnIfUnbound(api: OpenClawApi): void {
+  let token: string | undefined;
+  try {
+    // OpenClawApi 形状不固定，best-effort 读取
+    const runtime = (api as any).runtime;
+    const cfg =
+      typeof runtime?.getConfig === "function"
+        ? runtime.getConfig()
+        : (api as any).config ?? {};
+    token = cfg?.channels?.xalgo_voice?.token;
+  } catch {
+    /* ignore */
+  }
+
+  if (token && token.length > 0) return;
+
+  console.log("");
+  console.log(
+    "┌────────────────────────────────────────────────────────────────┐",
+  );
+  console.log(
+    "│  [xalgo_voice] Channel registered but NOT bound yet.           │",
+  );
+  console.log(
+    "│  Run the binding wizard to receive an 8-digit code from        │",
+  );
+  console.log(
+    "│  Xalgo App and exchange it for a Channel Token:                │",
+  );
+  console.log(
+    "│                                                                │",
+  );
+  console.log(
+    "│    node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js │",
+  );
+  console.log(
+    "│                                                                │",
+  );
+  console.log(
+    "│  Then restart OpenClaw to load the binding.                    │",
+  );
+  console.log(
+    "└────────────────────────────────────────────────────────────────┘",
+  );
+  console.log("");
+}
 
 export default plugin;
