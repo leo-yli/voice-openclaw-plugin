@@ -39,7 +39,8 @@
       },
       "token": {
         "type": "string",
-        "description": "Xalgo Channel Token；由绑定向导自动写入，请勿手动修改"
+        "default": "",
+        "description": "Xalgo Channel Token；由绑定向导自动写入。install 时为空，setup wizard 跑完后才有值"
       },
       "instanceId": {
         "type": "string",
@@ -97,7 +98,7 @@
         }
       }
     },
-    "required": ["token"]
+    "required": []
   },
   "uiHints": {
     "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
