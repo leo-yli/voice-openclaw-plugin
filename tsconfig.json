@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["index.ts", "setup-entry.ts", "src/**/*.ts"],
+  "include": ["index.ts", "setup-entry.ts", "src/**/*.ts", "bin/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]
 }

@@ -152,36 +152,69 @@ openclaw plugins list | grep xalgo-voice
 
 打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
 
-### 2. 在 OpenClaw 运行配置向导
+### 2. 跑绑定向导 CLI
+
+> OpenClaw 自身的 `plugins install` 命令不会启动绑定流程，需要单独跑本插件提供的 `xalgo-bind` 命令。
+
+**方式 A：用项目目录直接跑（最稳）**
 
 ```bash
-openclaw plugins setup xalgo-voice
+cd ~/voice-openclaw-plugin
+node dist/bin/xalgo-bind.js
+```
+
+**方式 B：用 OpenClaw 安装位置的绝对路径**
+
+```bash
+node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+```
+
+**方式 C：如果你把插件目录加到 PATH** 或者 `npm link` 过，直接：
+
+```bash
+xalgo-bind
 ```
 
 向导会引导：
 
-1. 输入 8 位绑定码（不区分大小写）
-2. 输入 API Server 地址（默认值来自项目根 `endpoints.json`，**当前测试期：`https://asr-test.jlpay.com`**）
-3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
-4. 自动写入配置文件并建立 WebSocket 连接
+1. 检测是否已绑定，若有则提示「保持现状 / 重新绑定 / 解绑」
+2. 自动生成 / 复用 `instance_id`（设备 UUID）
+3. 输入 8 位绑定码（不区分大小写）
+4. 输入 API Server 地址（默认值来自项目根 `endpoints.json`，**当前测试期：`https://asr-test.jlpay.com`**）
+5. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
+6. 自动写入 `~/.openclaw/openclaw.json` 的 `channels.xalgo_voice.*` 字段
+7. 提示重启 OpenClaw 让插件加载新配置
+
+### 3. 重启 OpenClaw 让 channel 生效
+
+```bash
+openclaw gateway restart      # 或对应的 systemctl/supervisor 命令
+```
+
+Channel 加载后日志里会出现：
+
+```
+[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] WebSocket connected
+[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
+```
 
 > 💡 **开发者切换默认端点**：所有默认端点统一存放在项目根 `endpoints.json`，切换测试/生产环境只需改这一个文件。
 > 终端用户如需自定义，**不要**改 `node_modules` 里的 `endpoints.json`，请在 OpenClaw 配置中覆盖 `serverUrl` / `apiBaseUrl` 字段（参考下方"手动配置"示例）。
 
-### 3. 设备管理
+### 4. 设备管理
 
 绑定成功后：
 
 - 在 **Xalgo App → 设备列表** 可以查看已绑定的 OpenClaw、修改设备名、解绑、Rotate Token
-- 在 **OpenClaw 终端** 重新运行 `openclaw plugins setup xalgo-voice` 可以选择「保持现状 / 重新绑定 / 解绑」
+- 在 **OpenClaw 终端** 重新运行 `node dist/bin/xalgo-bind.js` 可以选择「保持现状 / 重新绑定 / 解绑」
 
-### 4. 安全说明
+### 5. 安全说明
 
 - Channel Token 与本地 `instance_id` 双因子鉴权：Token 即使被复制到另一台机器也无法使用
 - App 端主动解绑后，插件秒级感知并自动清空本地凭据
 - 5 分钟内绑定码累计验证失败 ≥5 次即作废
 
-### 5. 手动配置（高级）
+### 6. 手动配置（高级）
 
 绑定向导会自动写入以下配置到 `openclaw.json`。如有特殊需要也可手动调整：
 

@@ -12,12 +12,15 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/postbuild.mjs",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit",
-    "prepare": "tsc"
+    "prepare": "tsc && node scripts/postbuild.mjs"
+  },
+  "bin": {
+    "xalgo-bind": "./dist/bin/xalgo-bind.js"
   },
   "files": [
     "dist",
