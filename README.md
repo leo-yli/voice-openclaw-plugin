@@ -18,69 +18,100 @@ Xalgo Glasses → Pupa Cloud (ASR/TTS) → Xalgo Voice Channel Server
 
 ## 安装
 
-> **要求**：Node.js ≥ 20（推荐 Node 22+，去除 JSON import 的 experimental warning）
+> **要求**：Node.js ≥ 20（推荐 Node 22+，去除 JSON import 的 experimental warning）；OpenClaw 主机可访问 GitHub
+>
+> ⚠️ **`openclaw plugins install` 不支持任何 URL**（实测会报 `unsupported npm spec: URLs are not allowed`），仅接受 npm 包名或本地路径。所以 `git+https://...` 形式装不上，下面三种方式都先在 OpenClaw 主机上拉下来再装。
 
-按推荐度由高到低，**四种方式任选其一**：
+### 方式一：clone + 本地路径安装（当前推荐 ✅）
 
-### 方式一：通过 GitHub 仓库直接安装（当前推荐 ✅）
-
-仓库还未发布到 npm 公共仓库时使用，**最稳的安装方式**。npm 原生支持 git URL 安装，且本项目的 `package.json` 配置了 `prepare` 钩子，会在安装时自动跑 `tsc` 完成编译，所以**不需要本地 clone**。
+在 **OpenClaw 主机本机**上执行：
 
 ```bash
-# HTTPS（任何 git 主机皆可访问）
-openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git
+# 1. clone（建议放固定目录，避免后续路径变动）
+cd ~
+git clone https://github.com/leo-yli/voice-openclaw-plugin.git
+cd voice-openclaw-plugin
 
-# 锁定到某个 tag / commit / 分支
-openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#v0.1.0
-openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#master
-openclaw plugins install git+https://github.com/leo-yli/voice-openclaw-plugin.git#<commit-sha>
+# 2. 装依赖 + 编译（package.json 的 prepare 钩子会自动跑 tsc，
+#    但首次还是显式跑一次更稳）
+npm install
+npm run build
 
-# SSH（适合私有仓库 / 已配 SSH key 的环境）
-openclaw plugins install git+ssh://git@github.com/leo-yli/voice-openclaw-plugin.git
+# 3. 安装到 OpenClaw（注意是当前目录 . ，不是 ./dist；
+#    OpenClaw 要读 package.json 里的 openclaw 字段做发现）
+openclaw plugins install .
 ```
 
-安装时 npm 会自动：
+升级时：
 
-1. clone 仓库到临时目录
-2. `npm install` 装齐 devDependencies（含 typescript）
-3. 触发 `prepare` 钩子 → `tsc` 编译生成 `dist/`
-4. 把含 `dist/` 的目录复制到 OpenClaw 的插件位置
+```bash
+cd ~/voice-openclaw-plugin
+git pull
+npm install   # 如有 dependencies 变化
+npm run build
+openclaw plugins install .   # 重新装一遍即可
+```
 
-如果需要升级，重新跑同样命令即可（npm 会拉最新 commit 重编译）。
+### 方式二：npm pack 后装 tarball（适合无 git 但有 tarball 的环境）
 
-### 方式二：通过 npm 公共仓库（待发布后启用）
+如果你的运维流程倾向于分发单个 `.tgz` 文件（比如 CI 产出后通过 scp 推到生产机）：
+
+```bash
+# 开发机/CI 上：打包
+git clone https://github.com/leo-yli/voice-openclaw-plugin.git
+cd voice-openclaw-plugin
+npm install
+npm pack                                # 生成 xalgo-voice-openclaw-plugin-0.1.0.tgz
+
+# 把 .tgz 拷到 OpenClaw 主机
+scp xalgo-voice-openclaw-plugin-0.1.0.tgz user@openclaw-host:/tmp/
+
+# 在 OpenClaw 主机：装
+openclaw plugins install /tmp/xalgo-voice-openclaw-plugin-0.1.0.tgz
+```
+
+### 方式三：手动复制到 extensions 目录（离线 / 兜底）
+
+OpenClaw 启动时会扫描 `~/.openclaw/extensions/<plugin-name>/` 自动加载。不走 `plugins install` 命令的离线方式：
+
+```bash
+# 1. 在能联网的机器上 clone + build
+git clone https://github.com/leo-yli/voice-openclaw-plugin.git
+cd voice-openclaw-plugin
+npm install
+npm run build
+
+# 2. 整目录打包（必须含 dist/ 和 node_modules/runtime 依赖）
+npm install --omit=dev               # 只保留 production 依赖
+tar czf voice-openclaw-plugin.tar.gz \
+    dist node_modules endpoints.json openclaw.plugin.json package.json README.md
+
+# 3. 推到 OpenClaw 主机，解压到 extensions 目录
+scp voice-openclaw-plugin.tar.gz root@openclaw-host:/tmp/
+ssh root@openclaw-host
+mkdir -p ~/.openclaw/extensions/voice-openclaw-plugin
+cd ~/.openclaw/extensions/voice-openclaw-plugin
+tar xzf /tmp/voice-openclaw-plugin.tar.gz
+
+# 4. 重启 OpenClaw 让它扫到新插件
+```
+
+⚠️ 这种方式 OpenClaw 会把它标记为 **`loaded without install/load-path provenance`**（无安装来源记录），日志类似：
+
+```
+voice-openclaw-plugin: loaded without install/load-path provenance;
+treat as untracked local code and pin trust via plugins.allow or install records
+```
+
+如需被信任执行，把插件名加到 `plugins.allow` 配置。建议**优先用方式一/二**，方式三只在真正没办法跑 `openclaw plugins install` 时用。
+
+### 方式四：通过 npm 公共仓库（待发布后启用）
 
 ```bash
 openclaw plugins install @xalgo/voice-openclaw-plugin
 ```
 
-**目前包尚未发布到 npm**，请暂用方式一。
-
-### 方式三：本地 clone + 安装（适合本地修改开发）
-
-```bash
-git clone https://github.com/leo-yli/voice-openclaw-plugin.git
-cd voice-openclaw-plugin
-npm install
-npm run build                     # 生成 dist/
-openclaw plugins install .        # 注意是 . 不是 ./dist，让 OpenClaw 读到 package.json 的 openclaw 字段
-```
-
-修改源码后重新跑 `npm run build` + `openclaw plugins install .` 即可。
-
-### 方式四：通过 GitHub Release tarball（断网 / 离线场景）
-
-如果作者发布了 Release，下载 `.tgz` 后离线安装：
-
-```bash
-# 在线下载
-curl -L -o voice-openclaw-plugin.tgz https://github.com/leo-yli/voice-openclaw-plugin/releases/download/v0.1.0/xalgo-voice-openclaw-plugin-0.1.0.tgz
-
-# 本地安装
-openclaw plugins install ./voice-openclaw-plugin.tgz
-```
-
-> 也可以直接：`openclaw plugins install https://github.com/leo-yli/voice-openclaw-plugin/releases/download/v0.1.0/xalgo-voice-openclaw-plugin-0.1.0.tgz`
+**目前未发布到 npm**，请暂用方式一。
 
 ### 验证安装
 
@@ -88,7 +119,11 @@ openclaw plugins install ./voice-openclaw-plugin.tgz
 openclaw plugins list | grep xalgo-voice
 ```
 
-应该看到 `@xalgo/voice-openclaw-plugin v0.1.0`。
+应该看到 `@xalgo/voice-openclaw-plugin v0.1.0`。OpenClaw 启动 log 里也应该出现：
+
+```
+[plugins] [@xalgo/voice-openclaw-plugin 0.1.0] ...
+```
 
 ## 配置
 
