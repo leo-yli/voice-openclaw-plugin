@@ -201,7 +201,7 @@ export function createInboundAdapter() {
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
-      const xalgoConfig = config.channels?.xalgoVoice ?? config;
+      const xalgoConfig = config.channels?.xalgo_voice ?? config;
       const adapter: StoreAdapter = {
         read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
         write: writeConfig ?? (async () => {
@@ -229,7 +229,7 @@ export const outbound = {
   listAccountIds: () => ["default"],
 
   resolveAccount: (config: any, accountId?: string) => {
-    return config.channels?.xalgoVoice ?? { accountId: accountId ?? "default" };
+    return config.channels?.xalgo_voice ?? { accountId: accountId ?? "default" };
   },
 
   async sendText({ account, config, text, context }: {

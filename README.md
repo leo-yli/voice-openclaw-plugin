@@ -188,7 +188,7 @@ openclaw plugins setup xalgo-voice
 ```json
 {
   "channels": {
-    "xalgoVoice": {
+    "xalgo_voice": {
       "enabled": true,
       "serverUrl": "wss://asr-test.jlpay.com/openclaw/connect",
       "apiBaseUrl": "https://asr-test.jlpay.com",

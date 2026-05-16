@@ -55,10 +55,10 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBe("xvc_live_xyz");
-    expect(storage["channels.xalgoVoice.boundUserId"]).toBe("u_1");
-    expect(typeof storage["channels.xalgoVoice.instanceId"]).toBe("string");
-    expect((storage["channels.xalgoVoice.instanceId"] as string).startsWith("oc_")).toBe(true);
+    expect(storage["channels.xalgo_voice.token"]).toBe("xvc_live_xyz");
+    expect(storage["channels.xalgo_voice.boundUserId"]).toBe("u_1");
+    expect(typeof storage["channels.xalgo_voice.instanceId"]).toBe("string");
+    expect((storage["channels.xalgo_voice.instanceId"] as string).startsWith("oc_")).toBe(true);
     expect(logs.some((l) => l.includes("绑定成功") || l.includes("已保存"))).toBe(true);
   });
 
@@ -83,7 +83,7 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.xalgo_voice.token"]).toBeFalsy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][1].method).toBe("DELETE");
   });
@@ -100,35 +100,35 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.xalgo_voice.token"]).toBeFalsy();
     expect(logs.some((l) => l.includes("已过期"))).toBe(true);
   });
 
   it("empty code input → abort silently", async () => {
     const { storage, context } = makeContext([""]);
     await setup(context);
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.xalgo_voice.token"]).toBeFalsy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("invalid code format (length != 8) → log error and abort", async () => {
     const { storage, logs, context } = makeContext(["SHORT"]);
     await setup(context);
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.xalgo_voice.token"]).toBeFalsy();
     expect(logs.some((l) => l.includes("格式"))).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("existing binding + action=1 (keep) → no changes", async () => {
     const { storage, context } = makeContext(["1"]);
-    storage["channels.xalgoVoice.token"] = "old_token";
-    storage["channels.xalgoVoice.instanceId"] = "oc_existing";
-    storage["channels.xalgoVoice.boundAt"] = "2026-05-14T00:00:00Z";
-    storage["channels.xalgoVoice.boundUserId"] = "u_old";
+    storage["channels.xalgo_voice.token"] = "old_token";
+    storage["channels.xalgo_voice.instanceId"] = "oc_existing";
+    storage["channels.xalgo_voice.boundAt"] = "2026-05-14T00:00:00Z";
+    storage["channels.xalgo_voice.boundUserId"] = "u_old";
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBe("old_token");
+    expect(storage["channels.xalgo_voice.token"]).toBe("old_token");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

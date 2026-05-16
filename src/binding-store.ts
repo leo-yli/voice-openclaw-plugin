@@ -25,12 +25,12 @@ export interface StoreAdapter {
 }
 
 const KEYS = {
-  token: "channels.xalgoVoice.token",
-  instanceId: "channels.xalgoVoice.instanceId",
-  boundAt: "channels.xalgoVoice.boundAt",
-  boundUserId: "channels.xalgoVoice.boundUserId",
-  boundUserName: "channels.xalgoVoice.boundUserName",
-  deviceLabel: "channels.xalgoVoice.deviceLabel",
+  token: "channels.xalgo_voice.token",
+  instanceId: "channels.xalgo_voice.instanceId",
+  boundAt: "channels.xalgo_voice.boundAt",
+  boundUserId: "channels.xalgo_voice.boundUserId",
+  boundUserName: "channels.xalgo_voice.boundUserName",
+  deviceLabel: "channels.xalgo_voice.deviceLabel",
 } as const;
 
 export function createBindingStore(adapter: StoreAdapter): BindingStore {

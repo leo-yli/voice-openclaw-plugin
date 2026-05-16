@@ -23,7 +23,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
       config: {
         listAccountIds: () => ["default"],
         resolveAccount: (cfg: any, accountId?: string) =>
-          cfg.channels?.xalgoVoice ?? { accountId: accountId ?? "default" },
+          cfg.channels?.xalgo_voice ?? { accountId: accountId ?? "default" },
       },
       outbound,
       inbound: createInboundAdapter(),

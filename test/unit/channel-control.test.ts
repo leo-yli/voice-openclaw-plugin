@@ -5,10 +5,10 @@ import { createEvent } from "../../src/protocol.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgoVoice.token": "t",
-    "channels.xalgoVoice.instanceId": "oc_test",
-    "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-    "channels.xalgoVoice.boundUserId": "u_1",
+    "channels.xalgo_voice.token": "t",
+    "channels.xalgo_voice.instanceId": "oc_test",
+    "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+    "channels.xalgo_voice.boundUserId": "u_1",
   };
   return {
     store: createBindingStore({
@@ -46,7 +46,7 @@ describe("XalgoVoiceChannel + control events", () => {
 
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(data["channels.xalgoVoice.token"]).toBe("");
+    expect(data["channels.xalgo_voice.token"]).toBe("");
     expect(statusUpdates).toContain("unbound");
 
     await channel.stop();

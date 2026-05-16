@@ -20,10 +20,10 @@ describe("integration: message flow", () => {
     const messages: InboundMessage[] = [];
 
     const memory1: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "valid_token",
-      "channels.xalgoVoice.instanceId": "oc_test_instance",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_test",
+      "channels.xalgo_voice.token": "valid_token",
+      "channels.xalgo_voice.instanceId": "oc_test_instance",
+      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgo_voice.boundUserId": "u_test",
     };
     const store1 = createBindingStore({
       read: async (k) => memory1[k],
@@ -55,10 +55,10 @@ describe("integration: message flow", () => {
 
   it("sends outbound reply to Xalgo", async () => {
     const memory2: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "valid_token",
-      "channels.xalgoVoice.instanceId": "oc_test_instance",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_test",
+      "channels.xalgo_voice.token": "valid_token",
+      "channels.xalgo_voice.instanceId": "oc_test_instance",
+      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgo_voice.boundUserId": "u_test",
     };
     const store2 = createBindingStore({
       read: async (k) => memory2[k],

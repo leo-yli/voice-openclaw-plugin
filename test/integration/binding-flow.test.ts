@@ -18,11 +18,11 @@ describe("Integration: binding lifecycle", () => {
 
   it("happy path: connect with stored binding → exchange messages → server revokes → channel emits unbound status", async () => {
     const memoryConfig: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "test_token",
-      "channels.xalgoVoice.instanceId": "oc_test_inst",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_1",
-      "channels.xalgoVoice.boundUserName": "杨立",
+      "channels.xalgo_voice.token": "test_token",
+      "channels.xalgo_voice.instanceId": "oc_test_inst",
+      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgo_voice.boundUserId": "u_1",
+      "channels.xalgo_voice.boundUserName": "杨立",
     };
     const store = createBindingStore({
       read: async (k) => memoryConfig[k],
@@ -61,8 +61,8 @@ describe("Integration: binding lifecycle", () => {
     await new Promise((r) => setTimeout(r, 300));
 
     // 验证本地清空 + 状态切到 unbound
-    expect(memoryConfig["channels.xalgoVoice.token"]).toBe("");
-    expect(memoryConfig["channels.xalgoVoice.instanceId"]).toBe("");
+    expect(memoryConfig["channels.xalgo_voice.token"]).toBe("");
+    expect(memoryConfig["channels.xalgo_voice.instanceId"]).toBe("");
     expect(statusUpdates).toContain("unbound");
 
     await channel.stop();
@@ -83,10 +83,10 @@ describe("Integration: binding lifecycle", () => {
       // 使用与 mock server 默认匹配的 token（"test_token"），
       // 确保 WebSocket 认证成功，之后再收 token_rotated_notify
       const memoryConfig: Record<string, unknown> = {
-        "channels.xalgoVoice.token": "test_token",
-        "channels.xalgoVoice.instanceId": "oc_test_inst",
-        "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-        "channels.xalgoVoice.boundUserId": "u_1",
+        "channels.xalgo_voice.token": "test_token",
+        "channels.xalgo_voice.instanceId": "oc_test_inst",
+        "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+        "channels.xalgo_voice.boundUserId": "u_1",
       };
       const store = createBindingStore({
         read: async (k) => memoryConfig[k],
@@ -110,7 +110,7 @@ describe("Integration: binding lifecycle", () => {
       mock.pushTokenRotatedNotify("b_1");
       await new Promise((r) => setTimeout(r, 300));
 
-      expect(memoryConfig["channels.xalgoVoice.token"]).toBe("new_token_after_rotate");
+      expect(memoryConfig["channels.xalgo_voice.token"]).toBe("new_token_after_rotate");
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toContain("/v1/openclaw/bindings/rotate");

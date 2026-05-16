@@ -20,10 +20,10 @@ describe("integration: connect", () => {
     const statusChanges: string[] = [];
     const config = resolveConfig({ token: "valid_token", serverUrl: server.getUrl() });
     const memory: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "valid_token",
-      "channels.xalgoVoice.instanceId": "oc_test_instance",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_test",
+      "channels.xalgo_voice.token": "valid_token",
+      "channels.xalgo_voice.instanceId": "oc_test_instance",
+      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgo_voice.boundUserId": "u_test",
     };
     const store = createBindingStore({
       read: async (k) => memory[k],
@@ -46,10 +46,10 @@ describe("integration: connect", () => {
     const statusChanges: string[] = [];
     const config = resolveConfig({ token: "wrong_token", serverUrl: server.getUrl() });
     const memory: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "wrong_token",
-      "channels.xalgoVoice.instanceId": "oc_test_instance",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_test",
+      "channels.xalgo_voice.token": "wrong_token",
+      "channels.xalgo_voice.instanceId": "oc_test_instance",
+      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.xalgo_voice.boundUserId": "u_test",
     };
     const store = createBindingStore({
       read: async (k) => memory[k],
