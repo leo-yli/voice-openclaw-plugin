@@ -5,6 +5,12 @@
   "description": "Xalgo Voice Channel plugin for OpenClaw.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -21,16 +27,14 @@
   ],
   "openclaw": {
     "extensions": ["./dist/index.js"],
-    "setupEntry": "./dist/setup-entry.js",
-    "runtimeExtensions": ["./dist/index.js"],
-    "runtimeSetupEntry": "./dist/setup-entry.js",
     "channel": {
       "id": "xalgo_voice",
       "label": "Xalgo Voice",
       "blurb": "Talk to your OpenClaw agents through Xalgo voice devices."
     },
     "install": {
-      "npmSpec": "@xalgo/voice-openclaw-plugin"
+      "npmSpec": "@xalgo/voice-openclaw-plugin",
+      "localPath": "extensions/xalgo-voice-openclaw-plugin"
     }
   },
   "dependencies": {
