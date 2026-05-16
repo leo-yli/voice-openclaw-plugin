@@ -16,213 +16,165 @@ Xalgo Glasses → Pupa Cloud (ASR/TTS) → Xalgo Voice Channel Server
 - OpenClaw 无需暴露公网端口，适用于内网部署
 - 语音识别 (ASR) 和语音合成 (TTS) 由 Xalgo Pupa Cloud 处理，插件只负责消息转发
 
-## 安装
+## 快速开始（5 分钟接入）
 
-> **要求**：Node.js ≥ 20（推荐 Node 22+，去除 JSON import 的 experimental warning）；OpenClaw 主机可访问 GitHub
->
-> ⚠️ **`openclaw plugins install` 不支持任何 URL**（实测会报 `unsupported npm spec: URLs are not allowed`），仅接受 npm 包名或本地路径。所以 `git+https://...` 形式装不上，下面三种方式都先在 OpenClaw 主机上拉下来再装。
+> **前置要求**：OpenClaw `>= 2026.3.28`、Node.js `>= 20`（推荐 Node 22+，可去掉 JSON import 的 experimental warning）
 
-### 方式一：clone + 本地路径安装（当前推荐 ✅）
+四步装好并接入 Xalgo Voice channel：
 
-在 **OpenClaw 主机本机**上执行：
+### 1️⃣ 在 OpenClaw 主机上拉取仓库
 
 ```bash
-# 1. clone（建议放固定目录，避免后续路径变动）
 cd ~
 git clone https://github.com/leo-yli/voice-openclaw-plugin.git
 cd voice-openclaw-plugin
+npm install                  # prepare 钩子会自动 tsc 编译出 dist/
+```
 
-# 2. 装依赖 + 编译（package.json 的 prepare 钩子会自动跑 tsc，
-#    但首次还是显式跑一次更稳）
-npm install
-npm run build
+> ⚠️ **`openclaw plugins install` 不接受 URL 形式**（实测会报 `unsupported npm spec: URLs are not allowed`）。所以必须先在 OpenClaw 主机本地 clone。
 
-# 3. 安装到 OpenClaw（注意是当前目录 . ，不是 ./dist；
-#    OpenClaw 要读 package.json 里的 openclaw 字段做发现）
+### 2️⃣ 把当前目录注册为 OpenClaw 插件
+
+```bash
 openclaw plugins install .
 ```
 
-升级时（**关键：先删旧的，OpenClaw 不会自动覆盖**）：
+> ⚠️ **是 `.`，不是 `./dist`**——OpenClaw 要读 `package.json` 的 `openclaw` 字段做插件发现。
 
-```bash
-cd ~/voice-openclaw-plugin
-git pull
-npm install   # 如有 dependencies 变化
-npm run build
-
-# 删除已存在的旧版本（用 plugin manifest id "xalgo_voice"，不是 npm 包名）
-rm -rf ~/.openclaw/extensions/xalgo_voice
-
-# 重新安装
-openclaw plugins install .
-```
-
-> 💡 OpenClaw 用 `openclaw.plugin.json` 的 `id` 字段（即 `xalgo_voice`，snake_case）作为插件目录名 / config key，不是 npm 包名 `@xalgo/voice-openclaw-plugin`。卸载或操作目录时都用这个 id。
-
-### 常见错误：`plugin already exists`
-
-```
-plugin already exists: /root/.openclaw/extensions/xalgo_voice (delete it first)
-```
-
-OpenClaw 拒绝覆盖已存在的同名插件，按上面"升级"流程先 `rm -rf` 再装即可。安装过程中可能还会看到：
-
-```
-Also not a valid hook pack: Error: package.json missing openclaw.hooks
-```
-
-这是 OpenClaw 把它当 hook pack 解析失败的 fallback 提示，无害，可忽略。
-
-### 方式二：npm pack 后装 tarball（适合无 git 但有 tarball 的环境）
-
-如果你的运维流程倾向于分发单个 `.tgz` 文件（比如 CI 产出后通过 scp 推到生产机）：
-
-```bash
-# 开发机/CI 上：打包
-git clone https://github.com/leo-yli/voice-openclaw-plugin.git
-cd voice-openclaw-plugin
-npm install
-npm pack                                # 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
-
-# 把 .tgz 拷到 OpenClaw 主机
-scp xalgo-voice-openclaw-plugin-2026.5.16.tgz user@openclaw-host:/tmp/
-
-# 在 OpenClaw 主机：装
-openclaw plugins install /tmp/xalgo-voice-openclaw-plugin-2026.5.16.tgz
-```
-
-### 方式三：手动复制到 extensions 目录（离线 / 兜底）
-
-OpenClaw 启动时会扫描 `~/.openclaw/extensions/<plugin-name>/` 自动加载。不走 `plugins install` 命令的离线方式：
-
-```bash
-# 1. 在能联网的机器上 clone + build
-git clone https://github.com/leo-yli/voice-openclaw-plugin.git
-cd voice-openclaw-plugin
-npm install
-npm run build
-
-# 2. 整目录打包（必须含 dist/ 和 node_modules/runtime 依赖）
-npm install --omit=dev               # 只保留 production 依赖
-tar czf voice-openclaw-plugin.tar.gz \
-    dist node_modules endpoints.json openclaw.plugin.json package.json README.md
-
-# 3. 推到 OpenClaw 主机，解压到 extensions 目录
-scp voice-openclaw-plugin.tar.gz root@openclaw-host:/tmp/
-ssh root@openclaw-host
-mkdir -p ~/.openclaw/extensions/voice-openclaw-plugin
-cd ~/.openclaw/extensions/voice-openclaw-plugin
-tar xzf /tmp/voice-openclaw-plugin.tar.gz
-
-# 4. 重启 OpenClaw 让它扫到新插件
-```
-
-⚠️ 这种方式 OpenClaw 会把它标记为 **`loaded without install/load-path provenance`**（无安装来源记录），日志类似：
-
-```
-voice-openclaw-plugin: loaded without install/load-path provenance;
-treat as untracked local code and pin trust via plugins.allow or install records
-```
-
-如需被信任执行，把插件名加到 `plugins.allow` 配置。建议**优先用方式一/二**，方式三只在真正没办法跑 `openclaw plugins install` 时用。
-
-### 方式四：通过 npm 公共仓库（待发布后启用）
-
-```bash
-openclaw plugins install @xalgo/voice-openclaw-plugin
-```
-
-**目前未发布到 npm**，请暂用方式一。
-
-### 验证安装
-
-```bash
-openclaw plugins list | grep xalgo-voice
-```
-
-应该看到 `@xalgo/voice-openclaw-plugin v2026.5.16`。OpenClaw 启动 log 里也应该出现：
-
-```
-[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] ...
-```
-
-## 配置
-
-### 1. 在 Xalgo App 生成绑定码
-
-打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
-
-### 2. 跑绑定向导
-
-两种方式任选其一。
-
-#### 方式 A（推荐 ✅）：`openclaw channels add`
-
-OpenClaw 自带的 channel 添加向导。它会发现已注册的 channel，调用插件声明的 `setupWizard`，自动 prompt 用户输入 8 位绑定码：
+### 3️⃣ 跑 OpenClaw 自带的 channel 配置向导
 
 ```bash
 openclaw channels add
-# 选择 Xalgo Voice (语音)
-# ↑ 自动 prompt 8 位绑定码 → 自动 exchange 拿 Token → 写入 OpenClaw 配置
+# 选择 "Xalgo Voice (语音)" → 按提示输入 Xalgo App 给的 8 位绑定码
+# ↑ 向导会自动调 exchange 接口换长期 Channel Token，写入 OpenClaw 配置
 ```
 
-这与企业微信 (`@wecom/wecom-openclaw-plugin`) 用同样的机制，是 OpenClaw 推荐的标准 setup 方式。
+绑定码哪来？打开 Xalgo App，点击「连接 OpenClaw」，App 显示一个 **8 位绑定码**（5 分钟内有效）。
 
-#### 方式 B（fallback）：独立 CLI `xalgo-bind`
+> 这是 OpenClaw 推荐的标准 setup 路径——和企业微信 (`@wecom/wecom-openclaw-plugin`) 用同样机制（[`ChannelSetupWizard`](https://github.com/WecomTeam/wecom-openclaw-plugin/blob/main/src/onboarding.ts)）。
 
-如果 OpenClaw 版本不支持 setupWizard、或者你需要脚本化绑定流程，可以跑独立 CLI：
+### 4️⃣ 重启 OpenClaw 让 channel 加载新配置
 
 ```bash
-# OpenClaw 安装位置（推荐）
-node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
-
-# 或者从源码目录
-cd ~/voice-openclaw-plugin && node dist/bin/xalgo-bind.js
+openclaw gateway restart      # 或对应的 systemctl / supervisor 命令
 ```
 
-> 💡 别名：在 `~/.bashrc` 加 `alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js'`，之后绑定就是 `xalgo-bind` 一条命令。
-
-#### 向导流程（两种方式都一样）
-
-1. 检测是否已绑定（已绑则提示保持/重新绑定/解绑）
-2. 自动生成 / 复用 `instance_id`（设备 UUID）
-3. 输入 8 位绑定码（不区分大小写）
-4. 调 exchange 接口换长期 Channel Token
-5. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
-6. 自动写入 `~/.openclaw/openclaw.json` 的 `channels.xalgo_voice.*` 字段
-
-### 3. 重启 OpenClaw 让 channel 生效
-
-```bash
-openclaw gateway restart      # 或对应的 systemctl/supervisor 命令
-```
-
-Channel 加载后日志里会出现：
+启动 log 里应该看到：
 
 ```
 [plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] WebSocket connected
 [plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
 ```
 
-> 💡 **开发者切换默认端点**：所有默认端点统一存放在项目根 `endpoints.json`，切换测试/生产环境只需改这一个文件。
-> 终端用户如需自定义，**不要**改 `node_modules` 里的 `endpoints.json`，请在 OpenClaw 配置中覆盖 `serverUrl` / `apiBaseUrl` 字段（参考下方"手动配置"示例）。
+✅ 接入完成。对 Xalgo 眼镜说话即可触发 OpenClaw Agent。
 
-### 4. 设备管理
+---
 
-绑定成功后：
+## 验证 / 排错
 
-- 在 **Xalgo App → 设备列表** 可以查看已绑定的 OpenClaw、修改设备名、解绑、Rotate Token
-- 在 **OpenClaw 终端** 重新运行 `node dist/bin/xalgo-bind.js` 可以选择「保持现状 / 重新绑定 / 解绑」
+| 检查 | 命令 | 期望 |
+|---|---|---|
+| 插件是否被识别 | `openclaw plugins list \| grep xalgo` | 看到 `xalgo_voice` 一行 |
+| 插件细节 | `openclaw plugins inspect xalgo_voice` | `Shape: plain-capability` + `Capabilities: channel: xalgo_voice` |
+| 配置是否写入 | `cat ~/.openclaw/openclaw.json \| grep -A 5 xalgo_voice` | 看到 `token` 等字段 |
 
-### 5. 安全说明
+常见错误：
 
-- Channel Token 与本地 `instance_id` 双因子鉴权：Token 即使被复制到另一台机器也无法使用
-- App 端主动解绑后，插件秒级感知并自动清空本地凭据
-- 5 分钟内绑定码累计验证失败 ≥5 次即作废
+- **`plugin already exists` 在 install 时报**：之前装过，先 `rm -rf ~/.openclaw/extensions/xalgo_voice` 再 install
+- **`Also not a valid hook pack: package.json missing openclaw.hooks`**：fallback 解析尝试失败的无害提示，可忽略
+- **`Plugin manifest id "xalgo_voice" differs from npm package name`**：cosmetic 警告，不影响功能（OpenClaw 用 manifest id 作 config key）
 
-### 6. 手动配置（高级）
+---
 
-绑定向导会自动写入以下配置到 `openclaw.json`。如有特殊需要也可手动调整：
+## 升级
+
+```bash
+cd ~/voice-openclaw-plugin
+git pull
+npm install                                    # prepare 钩子重 build
+rm -rf ~/.openclaw/extensions/xalgo_voice      # ★ OpenClaw 不会自动覆盖，必须先删
+openclaw plugins install .
+openclaw gateway restart
+```
+
+---
+
+## 备用安装方式
+
+> 99% 场景下用上面的「快速开始」就行。下面是特殊环境的备选。
+
+### B. npm pack tarball（无 git 但能 scp 的环境）
+
+```bash
+# 开发机 / CI 上：
+cd voice-openclaw-plugin && npm install && npm pack
+# → 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
+
+# OpenClaw 主机上：
+openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
+```
+
+### C. 离线手动复制到 extensions 目录
+
+只在完全不能跑 `openclaw plugins install` 时用：
+
+```bash
+# 在能联网的机器：build 并打包
+cd voice-openclaw-plugin && npm install && npm run build
+npm install --omit=dev
+tar czf plugin.tar.gz dist node_modules endpoints.json openclaw.plugin.json package.json README.md
+
+# 推到 OpenClaw 主机并解压
+scp plugin.tar.gz root@<host>:/tmp/
+ssh root@<host>
+mkdir -p ~/.openclaw/extensions/xalgo_voice
+tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
+openclaw gateway restart
+```
+
+⚠️ 这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`，**需要在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 里手动加上 `xalgo_voice`** 才能被信任执行。
+
+### D. 通过 npm 公共仓库（待发布）
+
+```bash
+openclaw plugins install @xalgo/voice-openclaw-plugin
+```
+
+**目前未发布到 npm**，暂用上面其它方式。
+
+---
+
+## 重新绑定 / 解绑 / 切账号
+
+绑定后想换 Xalgo 账号、或者怀疑 token 泄漏想 rotate：
+
+### 方式 A：`openclaw channels add` 再走一次
+
+向导会检测到已有绑定，提示「保持/重新绑定/解绑」三选一。
+
+### 方式 B：独立 CLI `xalgo-bind`（fallback）
+
+如果你 OpenClaw 版本不支持 `channels add` 命令、或者需要脚本化操作：
+
+```bash
+node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+```
+
+> 💡 建议在 `~/.bashrc` 里加：
+> ```bash
+> alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js'
+> ```
+> 之后绑定/解绑都是一条 `xalgo-bind`。
+
+### 方式 C：Xalgo App 端解绑
+
+在 Xalgo App「设备列表」点击对应 OpenClaw → 移除/Rotate Token。App 操作后服务端会通过 WebSocket 推 `binding_revoked` / `token_rotated_notify`，插件秒级感知，自动清空 / 更换本地凭据。
+
+---
+
+## 高级：手动编辑配置
+
+绑定向导写入的字段都在 `~/.openclaw/openclaw.json` 的 `channels.xalgo_voice.*` 下。**通常不需要手动改**，但如果要切换 API 端点或调试，可以参考下面的完整 schema：
 
 ```json
 {
@@ -252,13 +204,20 @@ Channel 加载后日志里会出现：
 }
 ```
 
+> 💡 **默认端点的 source of truth**：`serverUrl` / `apiBaseUrl` 的默认值在项目根的 `endpoints.json`。开发者切换测试/生产环境只需改这一个文件。
+> 终端用户**不要**改 `node_modules` 里的 `endpoints.json`——请通过上面 OpenClaw 配置覆盖 `channels.xalgo_voice.serverUrl` / `apiBaseUrl`。
+
 ## 配置项说明
 
 | 配置项 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| `enabled` | boolean | `false` | 是否启用插件 |
-| `serverUrl` | string | `wss://asr-test.jlpay.com/openclaw/connect` | Channel Server 地址（测试期） |
-| `token` | string | (必填) | Xalgo Channel Token |
+| `enabled` | boolean | `false` | 是否启用插件（绑定向导成功后自动设为 true） |
+| `serverUrl` | string | `wss://asr-test.jlpay.com/openclaw/connect` | WebSocket Channel Server 地址（默认值来自 `endpoints.json`） |
+| `apiBaseUrl` | string | `https://asr-test.jlpay.com` | REST API base（用于 exchange/rotate/unbind；默认值来自 `endpoints.json`） |
+| `token` | string | (绑定向导自动写入) | Xalgo Channel Token，请勿手动修改 |
+| `instanceId` | string | (绑定向导自动生成 UUID v4) | 插件实例 ID，作为设备指纹参与鉴权 |
+| `boundUserId` / `boundUserName` / `boundAt` | string | (绑定向导自动写入) | 仅供展示用 |
+| `deviceLabel` | string | `OpenClaw on <hostname>` | 设备标签，在 Xalgo App 侧显示 |
 | `agentId` | string | `"voice"` | OpenClaw Agent ID |
 | `sessionPrefix` | string | `"xalgo_voice"` | Session ID 前缀 |
 | `streaming` | boolean | `true` | 是否启用流式回复（边生成边播报） |
