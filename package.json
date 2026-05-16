@@ -22,10 +22,15 @@
   "openclaw": {
     "extensions": ["./dist/index.js"],
     "setupEntry": "./dist/setup-entry.js",
+    "runtimeExtensions": ["./dist/index.js"],
+    "runtimeSetupEntry": "./dist/setup-entry.js",
     "channel": {
       "id": "xalgo_voice",
       "label": "Xalgo Voice",
       "blurb": "Talk to your OpenClaw agents through Xalgo voice devices."
+    },
+    "install": {
+      "npmSpec": "@xalgo/voice-openclaw-plugin"
     }
   },
   "dependencies": {
