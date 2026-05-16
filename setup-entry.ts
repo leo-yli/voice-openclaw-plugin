@@ -69,7 +69,32 @@ async function handleUnbind(
   }
 }
 
-export default async function setup(context: SetupContext): Promise<void> {
+/**
+ * 检测 OpenClaw 传入的 context 是否包含绑定向导所需的三件套（prompt/writeConfig/log）。
+ *
+ * 重要背景：openclaw.setupEntry 字段被 OpenClaw 当作 plugin lifecycle 钩子，
+ * 在 install / load 时会自动调用，但传入的 context 形状跟交互式向导不同（无 prompt
+ * 等函数）。如果没有这些函数说明是 lifecycle 调用，直接退出避免崩溃；要触发真正
+ * 的绑定向导，请通过独立 CLI 入口（详见 README）。
+ */
+function hasWizardContext(ctx: unknown): ctx is SetupContext {
+  const c = ctx as Partial<SetupContext> | null;
+  return (
+    !!c &&
+    typeof c.prompt === "function" &&
+    typeof c.writeConfig === "function" &&
+    typeof c.log === "function"
+  );
+}
+
+export default async function setup(rawContext: unknown): Promise<void> {
+  if (!hasWizardContext(rawContext)) {
+    // OpenClaw lifecycle 加载时不带 wizard 上下文，安全返回不做任何 prompt
+    log.debug("setup invoked without wizard context, skipping (lifecycle load)");
+    return;
+  }
+  const context = rawContext;
+
   context.log("Xalgo Voice Channel 配置向导");
   context.log("────────────────────────────");
   context.log("");
