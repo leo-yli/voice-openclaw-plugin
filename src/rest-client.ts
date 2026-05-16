@@ -32,6 +32,9 @@ export type ExchangeErrorType =
   | "network_error"
   | "server_error"
   | "auth_failed"
+  /** HTTP 404 / 405：endpoint 不存在或不接受当前 method。
+   *  通常意味着服务端还没实现该 API，对照 docs/api-contract.md。 */
+  | "endpoint_unsupported"
   | "unknown";
 
 export class ExchangeError extends Error {
@@ -118,6 +121,9 @@ function mapErrorType(httpStatus: number, problemType?: string): ExchangeErrorTy
   if (httpStatus >= 500) return "server_error";
   if (httpStatus === 429) return "rate_limited";
   if (httpStatus === 401) return "auth_failed";
+  // 404 = endpoint 不存在 / 405 = endpoint 不接受当前 method
+  // 都是"后端还没实现该 API"的典型表现（比如 nginx 直接 405 兜底）
+  if (httpStatus === 404 || httpStatus === 405) return "endpoint_unsupported";
   return "unknown";
 }
 

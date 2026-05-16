@@ -135,6 +135,16 @@ export const xalgoVoiceSetupWizard: any = {
     } catch (err) {
       delete channel._pendingCode;
       if (err instanceof ExchangeError) {
+        // endpoint_unsupported 是常见的"对接早期"错误，给一条人话提示
+        if (err.type === "endpoint_unsupported") {
+          throw new Error(
+            `服务端尚未实现绑定接口（HTTP ${err.httpStatus} from ${err.requestUrl}）。\n` +
+              `请联系后端对照 docs/api-contract.md 实现 ` +
+              `POST /v1/openclaw/bindings/exchange 等 3 个 REST endpoint。\n` +
+              `响应内容: ${err.responseBodySnippet ?? "(空)"}`,
+          );
+        }
+
         const parts = [`绑定失败 (${err.type})`];
         if (err.httpStatus !== undefined) parts.push(`HTTP ${err.httpStatus}`);
         if (err.requestUrl) parts.push(`url=${err.requestUrl}`);
