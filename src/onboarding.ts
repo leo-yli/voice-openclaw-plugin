@@ -135,10 +135,14 @@ export const xalgoVoiceSetupWizard: any = {
     } catch (err) {
       delete channel._pendingCode;
       if (err instanceof ExchangeError) {
-        throw new Error(
-          `绑定失败 (${err.type})` +
-            (err.retryAfterSec ? `；请 ${err.retryAfterSec}s 后重试` : ""),
-        );
+        const parts = [`绑定失败 (${err.type})`];
+        if (err.httpStatus !== undefined) parts.push(`HTTP ${err.httpStatus}`);
+        if (err.requestUrl) parts.push(`url=${err.requestUrl}`);
+        if (err.responseBodySnippet)
+          parts.push(`body="${err.responseBodySnippet}"`);
+        if (err.retryAfterSec)
+          parts.push(`请 ${err.retryAfterSec}s 后重试`);
+        throw new Error(parts.join(" | "));
       }
       throw err;
     }

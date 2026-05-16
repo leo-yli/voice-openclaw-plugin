@@ -35,8 +35,26 @@ export type ExchangeErrorType =
   | "unknown";
 
 export class ExchangeError extends Error {
-  constructor(public type: ExchangeErrorType, public retryAfterSec?: number) {
-    super(type);
+  constructor(
+    public type: ExchangeErrorType,
+    public retryAfterSec?: number,
+    /** HTTP 状态码，方便排查 unknown / server_error 类错误 */
+    public httpStatus?: number,
+    /** 响应体片段（截断到 ~200 字符），方便排查响应 schema 不匹配 */
+    public responseBodySnippet?: string,
+    /** 请求的 URL，方便定位是哪个 endpoint */
+    public requestUrl?: string,
+  ) {
+    super(
+      [
+        type,
+        httpStatus !== undefined ? `http=${httpStatus}` : "",
+        requestUrl ? `url=${requestUrl}` : "",
+        responseBodySnippet ? `body=${responseBodySnippet}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | "),
+    );
     this.name = "ExchangeError";
   }
 }
@@ -65,11 +83,19 @@ async function doFetch(
   }
 }
 
-async function parseProblemJson(res: Response): Promise<{ type?: string }> {
+async function parseProblemJson(
+  res: Response,
+): Promise<{ problem: { type?: string }; bodySnippet: string }> {
   try {
-    return await res.json();
+    const text = await res.text();
+    const snippet = text.slice(0, 200);
+    try {
+      return { problem: JSON.parse(text), bodySnippet: snippet };
+    } catch {
+      return { problem: {}, bodySnippet: snippet };
+    }
   } catch {
-    return {};
+    return { problem: {}, bodySnippet: "" };
   }
 }
 
@@ -155,16 +181,24 @@ export function createRestClient(apiBaseUrl: string): RestClient {
         };
       }
 
-      const problem = await parseProblemJson(res);
+      const url = `${base}/v1/openclaw/bindings/exchange`;
+      const { problem, bodySnippet } = await parseProblemJson(res);
       const type = mapErrorType(res.status, problem.type);
       const retryAfter = res.headers.get("retry-after");
+      log.error(
+        `exchange failed: http=${res.status} type=${type} url=${url} body=${bodySnippet}`,
+      );
       throw new ExchangeError(
         type,
-        retryAfter ? parseInt(retryAfter, 10) : undefined
+        retryAfter ? parseInt(retryAfter, 10) : undefined,
+        res.status,
+        bodySnippet,
+        url,
       );
     },
 
     async rotate(oldToken: string, instanceId: string): Promise<{ channelToken: string }> {
+      const url = `${base}/v1/openclaw/bindings/rotate`;
       const res = await postWithRetry(
         "/v1/openclaw/bindings/rotate",
         {},
@@ -177,12 +211,19 @@ export function createRestClient(apiBaseUrl: string): RestClient {
         const data = (await res.json()) as Record<string, string>;
         return { channelToken: data.channel_token };
       }
-      const problem = await parseProblemJson(res);
-      throw new ExchangeError(mapErrorType(res.status, problem.type));
+      const { problem, bodySnippet } = await parseProblemJson(res);
+      throw new ExchangeError(
+        mapErrorType(res.status, problem.type),
+        undefined,
+        res.status,
+        bodySnippet,
+        url,
+      );
     },
 
     async unbind(token: string, instanceId: string): Promise<void> {
-      const res = await doFetch(`${base}/v1/openclaw/bindings/me`, {
+      const url = `${base}/v1/openclaw/bindings/me`;
+      const res = await doFetch(url, {
         method: "DELETE",
         headers: {
           authorization: `Bearer ${token}`,
@@ -191,10 +232,16 @@ export function createRestClient(apiBaseUrl: string): RestClient {
       });
       if (res.status === 204) return;
       if (res.status >= 500) {
-        throw new ExchangeError("server_error");
+        throw new ExchangeError("server_error", undefined, res.status, undefined, url);
       }
-      const problem = await parseProblemJson(res);
-      throw new ExchangeError(mapErrorType(res.status, problem.type));
+      const { problem, bodySnippet } = await parseProblemJson(res);
+      throw new ExchangeError(
+        mapErrorType(res.status, problem.type),
+        undefined,
+        res.status,
+        bodySnippet,
+        url,
+      );
     },
   };
 }
