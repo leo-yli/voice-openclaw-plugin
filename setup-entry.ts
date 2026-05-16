@@ -24,6 +24,8 @@ const ERROR_MESSAGES: Record<ExchangeErrorType, string> = {
   network_error: "网络错误，请检查网络后重试",
   server_error: "服务暂时不可用",
   auth_failed: "鉴权失败",
+  endpoint_unsupported:
+    "服务端尚未实现该 API（HTTP 404/405），请联系后端对照 docs/api-contract.md 实现",
   unknown: "未知错误",
 };
 
