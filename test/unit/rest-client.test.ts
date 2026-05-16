@@ -49,7 +49,7 @@ describe("RestClient.exchange", () => {
       code: "A3FK9PQX",
       instanceId: "oc_uuid",
       deviceLabel: "host",
-      pluginVersion: "0.1.0",
+      pluginVersion: "2026.5.16",
     });
 
     expect(resp.channelToken).toBe("xvc_live_abc");
@@ -75,7 +75,7 @@ describe("RestClient.exchange", () => {
     );
     const client = createRestClient("https://api.example.com");
     await expect(
-      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "0.1.0" })
+      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "code_expired" });
   });
 
@@ -88,7 +88,7 @@ describe("RestClient.exchange", () => {
     );
     const client = createRestClient("https://api.example.com");
     const err = await client
-      .exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "0.1.0" })
+      .exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
       .catch((e) => e);
     expect(err).toBeInstanceOf(ExchangeError);
     expect(err.type).toBe("rate_limited");
@@ -99,7 +99,7 @@ describe("RestClient.exchange", () => {
     fetchMock.mockResolvedValue(new Response("oops", { status: 500 }));
     const client = createRestClient("https://api.example.com");
     await expect(
-      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "0.1.0" })
+      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "server_error" });
     expect(fetchMock).toHaveBeenCalledTimes(3);
   }, 20000);
@@ -108,7 +108,7 @@ describe("RestClient.exchange", () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
     const client = createRestClient("https://api.example.com");
     await expect(
-      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "0.1.0" })
+      client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "network_error" });
   });
 });

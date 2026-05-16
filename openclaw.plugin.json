@@ -1,7 +1,7 @@
 {
   "id": "xalgo_voice",
   "name": "Xalgo Voice",
-  "version": "0.1.0",
+  "version": "2026.5.16",
   "description": "Voice channel plugin that connects Xalgo glasses and Pupa voice cloud to OpenClaw agents.",
   "main": "./dist/index.js",
   "openclaw": {

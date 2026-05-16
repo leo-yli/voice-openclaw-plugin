@@ -51,14 +51,14 @@
 POST /v1/openclaw/bindings/exchange HTTP/1.1
 Host: asr-test.jlpay.com
 Content-Type: application/json
-X-Plugin-Version: 0.1.0
+X-Plugin-Version: 2026.5.16
 X-Idempotency-Key: idem_<timestamp>_<random>
 
 {
   "code": "A3FK9PQX",
   "instance_id": "oc_550e8400-e29b-41d4-a716-446655440000",
   "device_label": "OpenClaw on yangli-mac",
-  "plugin_version": "0.1.0"
+  "plugin_version": "2026.5.16"
 }
 ```
 
@@ -226,7 +226,7 @@ wss://asr-test.jlpay.com/openclaw/connect
     "client": {
       "kind": "openclaw",
       "plugin": "@xalgo/voice-openclaw-plugin",
-      "plugin_version": "0.1.0",
+      "plugin_version": "2026.5.16",
       "instance_id": "oc_550e8400-...",
       "device_name": "OpenClaw on yangli-mac"
     },

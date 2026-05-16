@@ -82,13 +82,13 @@ Also not a valid hook pack: Error: package.json missing openclaw.hooks
 git clone https://github.com/leo-yli/voice-openclaw-plugin.git
 cd voice-openclaw-plugin
 npm install
-npm pack                                # 生成 xalgo-voice-openclaw-plugin-0.1.0.tgz
+npm pack                                # 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
 
 # 把 .tgz 拷到 OpenClaw 主机
-scp xalgo-voice-openclaw-plugin-0.1.0.tgz user@openclaw-host:/tmp/
+scp xalgo-voice-openclaw-plugin-2026.5.16.tgz user@openclaw-host:/tmp/
 
 # 在 OpenClaw 主机：装
-openclaw plugins install /tmp/xalgo-voice-openclaw-plugin-0.1.0.tgz
+openclaw plugins install /tmp/xalgo-voice-openclaw-plugin-2026.5.16.tgz
 ```
 
 ### 方式三：手动复制到 extensions 目录（离线 / 兜底）
@@ -140,10 +140,10 @@ openclaw plugins install @xalgo/voice-openclaw-plugin
 openclaw plugins list | grep xalgo-voice
 ```
 
-应该看到 `@xalgo/voice-openclaw-plugin v0.1.0`。OpenClaw 启动 log 里也应该出现：
+应该看到 `@xalgo/voice-openclaw-plugin v2026.5.16`。OpenClaw 启动 log 里也应该出现：
 
 ```
-[plugins] [@xalgo/voice-openclaw-plugin 0.1.0] ...
+[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] ...
 ```
 
 ## 配置

@@ -1,7 +1,15 @@
 import type { OpenClawApi } from "openclaw";
 import { createInboundAdapter, outbound } from "./src/channel.js";
 
-export default function registerXalgoVoicePlugin(api: OpenClawApi) {
+/**
+ * OpenClaw plugin entry. Must be SYNCHRONOUS — returning a Promise causes
+ * OpenClaw to log "plugin register returned a promise; async registration
+ * is ignored" and skip the channel registration entirely.
+ *
+ * Exposed as both a named export (`register`) and a default export to maximize
+ * compatibility with how OpenClaw resolves the entry function.
+ */
+export function register(api: OpenClawApi): void {
   api.registerChannel({
     plugin: {
       id: "xalgo_voice",
@@ -31,4 +39,8 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   });
 }
 
-export { createInboundAdapter, outbound, XalgoVoiceChannel } from "./src/channel.js";
+// Provide multiple export shapes so OpenClaw can find the entry under whatever
+// name it looks for (register / setup / activate / default).
+export const setup = register;
+export const activate = register;
+export default register;

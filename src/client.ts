@@ -131,7 +131,7 @@ export class XvcClient {
       client: {
         kind: "openclaw",
         plugin: "@xalgo/voice-openclaw-plugin",
-        plugin_version: "0.1.0",
+        plugin_version: "2026.5.16",
         instance_id: binding.instanceId,
         device_name: binding.deviceLabel ?? "OpenClaw Instance",
       },

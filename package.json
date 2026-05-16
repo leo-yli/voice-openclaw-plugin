@@ -1,6 +1,6 @@
 {
   "name": "@xalgo/voice-openclaw-plugin",
-  "version": "0.1.0",
+  "version": "2026.5.16",
   "type": "module",
   "description": "Xalgo Voice Channel plugin for OpenClaw.",
   "main": "./dist/index.js",

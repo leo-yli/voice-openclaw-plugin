@@ -7,7 +7,7 @@ import { DEFAULT_CONFIG } from "./src/config.js";
 
 const log = createLogger("setup");
 
-const PLUGIN_VERSION = "0.1.0";
+const PLUGIN_VERSION = "2026.5.16";
 /** API Server 默认地址，与运行时配置 (DEFAULT_CONFIG.apiBaseUrl) 共用同一个 source of truth */
 const DEFAULT_API_BASE_URL = DEFAULT_CONFIG.apiBaseUrl;
 const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
