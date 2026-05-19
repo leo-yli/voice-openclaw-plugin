@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import plugin from "../../index.js";
 import { resolveXalgoAccount } from "../../src/account-config.js";
 import { createInboundAdapter } from "../../src/channel.js";
 
@@ -61,6 +62,23 @@ describe("xalgo account config resolution", () => {
       token: "xvc_live_abc",
       instanceId: "oc_123",
     });
+  });
+});
+
+describe("OpenClaw channel config hooks", () => {
+  it("reports a complete channel binding as configured", () => {
+    const config = makeCompleteConfig();
+    let channelPlugin: any;
+
+    plugin.register({
+      registerChannel: vi.fn(({ plugin }) => {
+        channelPlugin = plugin;
+      }),
+    } as any);
+
+    const account = channelPlugin.config.resolveAccount(config, "default");
+
+    expect(channelPlugin.config.isConfigured(account, config)).toBe(true);
   });
 });
 

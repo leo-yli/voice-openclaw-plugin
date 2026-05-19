@@ -1,5 +1,8 @@
 import type { OpenClawApi } from "openclaw";
-import { resolveXalgoAccount } from "./src/account-config.js";
+import {
+  hasCompleteXalgoBinding,
+  resolveXalgoAccount,
+} from "./src/account-config.js";
 import { createInboundAdapter, outbound } from "./src/channel.js";
 import {
   xalgoVoiceSetupWizard,
@@ -51,6 +54,8 @@ const plugin = {
           listAccountIds: () => ["default"],
           resolveAccount: (cfg: any, accountId?: string) =>
             resolveXalgoAccount(cfg, accountId),
+          isEnabled: (account: any) => account?.enabled !== false,
+          isConfigured: (account: any) => hasCompleteXalgoBinding(account),
         },
         outbound,
         inbound: createInboundAdapter(),
