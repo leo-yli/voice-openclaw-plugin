@@ -40,6 +40,7 @@
           "boundAt": { "type": "string" },
           "boundUserId": { "type": "string" },
           "boundUserName": { "type": "string" },
+          "_pendingCode": { "type": "string" },
           "agentId": { "type": "string", "default": "voice" },
           "sessionPrefix": { "type": "string", "default": "xalgo_voice" },
           "streaming": { "type": "boolean", "default": true },

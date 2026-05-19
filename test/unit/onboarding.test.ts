@@ -122,6 +122,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
     xalgoVoiceSetupWizard.credentials[0].applySet({ cfg, resolvedValue: "abcd3456" });
 
     expect(cfg.channels.xalgo_voice._pendingCode).toBe("ABCD3456");
+    expect(cfg.channels.xalgo_voice.accountId).toBeUndefined();
     expect((cfg as any).channelAccounts).toBeUndefined();
   });
 });

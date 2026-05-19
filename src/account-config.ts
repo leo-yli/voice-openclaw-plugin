@@ -67,7 +67,8 @@ export function resolveXalgoAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): X
 
 export function setXalgoAccount(cfg: any, patch: XalgoAccountConfig, accountId = DEFAULT_ACCOUNT_ID): any {
   const channel = ensureXalgoChannel(cfg);
-  Object.assign(channel, patch, { accountId });
+  Object.assign(channel, patch);
+  if (patch._pendingCode === "") delete channel._pendingCode;
   return cfg;
 }
 
