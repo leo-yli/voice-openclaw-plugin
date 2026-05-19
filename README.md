@@ -137,7 +137,7 @@ npm run build                                  # 确保 dist 是最新
 openclaw plugins uninstall xalgo_voice         # 先让 OpenClaw 清理 config / install record / channel config
 rm -rf ~/.openclaw/extensions/xalgo_voice      # uninstall 后再删除残留安装目录
 openclaw plugins install .                     # 重新安装新版插件
-openclaw channels add                          # 重新绑定/刷新 channelAccounts.xalgo_voice 配置
+openclaw channels add                          # 重新绑定/刷新 channels.xalgo_voice 配置
 openclaw gateway restart
 ```
 

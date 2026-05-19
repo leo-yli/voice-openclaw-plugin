@@ -116,12 +116,12 @@ describe("xalgoVoiceSetupWizard configured state", () => {
     expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
   });
 
-  it("writes pending code to channel account and legacy channel config", () => {
+  it("writes pending code to channel config only", () => {
     const cfg = makeCfg({});
 
     xalgoVoiceSetupWizard.credentials[0].applySet({ cfg, resolvedValue: "abcd3456" });
 
     expect(cfg.channels.xalgo_voice._pendingCode).toBe("ABCD3456");
-    expect((cfg as any).channelAccounts.xalgo_voice._pendingCode).toBe("ABCD3456");
+    expect((cfg as any).channelAccounts).toBeUndefined();
   });
 });

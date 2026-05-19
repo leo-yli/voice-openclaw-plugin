@@ -67,9 +67,7 @@ export function resolveXalgoAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): X
 
 export function setXalgoAccount(cfg: any, patch: XalgoAccountConfig, accountId = DEFAULT_ACCOUNT_ID): any {
   const channel = ensureXalgoChannel(cfg);
-  const account = ensureXalgoChannelAccount(cfg, accountId);
-  Object.assign(channel, patch);
-  Object.assign(account, patch, { accountId });
+  Object.assign(channel, patch, { accountId });
   return cfg;
 }
 

@@ -199,15 +199,6 @@ export default async function setup(rawContext: unknown): Promise<void> {
   await context.writeConfig("channels.xalgo_voice.enabled", true);
   await context.writeConfig("channels.xalgo_voice.apiBaseUrl", apiBaseUrl);
   await context.writeConfig("channels.xalgo_voice.serverUrl", resp.wsUrl);
-  await context.writeConfig("channelAccounts.xalgo_voice.enabled", true);
-  await context.writeConfig("channelAccounts.xalgo_voice.token", resp.channelToken);
-  await context.writeConfig("channelAccounts.xalgo_voice.instanceId", instanceId);
-  await context.writeConfig("channelAccounts.xalgo_voice.boundAt", new Date().toISOString());
-  await context.writeConfig("channelAccounts.xalgo_voice.boundUserId", resp.userId);
-  await context.writeConfig("channelAccounts.xalgo_voice.boundUserName", resp.userDisplayName);
-  await context.writeConfig("channelAccounts.xalgo_voice.deviceLabel", `OpenClaw on ${os.hostname()}`);
-  await context.writeConfig("channelAccounts.xalgo_voice.apiBaseUrl", apiBaseUrl);
-  await context.writeConfig("channelAccounts.xalgo_voice.serverUrl", resp.wsUrl);
 
   context.log("✓ 绑定成功，配置已保存。");
   context.log("  插件启动后会自动建立 WebSocket 连接。");
