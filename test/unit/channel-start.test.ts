@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveXalgoAccount } from "../../src/account-config.js";
 import { createInboundAdapter } from "../../src/channel.js";
 
 function makeCompleteConfig() {
@@ -41,6 +42,27 @@ function makeReadConfig(channel: Record<string, unknown>) {
     return channel[field];
   };
 }
+
+describe("xalgo account config resolution", () => {
+  it("treats the direct channel config object as the account", () => {
+    const account = resolveXalgoAccount({
+      enabled: true,
+      token: "xvc_live_abc",
+      instanceId: "oc_123",
+      boundAt: "2026-05-19T03:39:43.192Z",
+      boundUserId: "default-user",
+      serverUrl: "ws://127.0.0.1:1",
+      apiBaseUrl: "https://asr-test.jlpay.com",
+    });
+
+    expect(account).toMatchObject({
+      accountId: "default",
+      enabled: true,
+      token: "xvc_live_abc",
+      instanceId: "oc_123",
+    });
+  });
+});
 
 describe("createInboundAdapter startup", () => {
   it("does not emit a synthetic ready status after starting", async () => {

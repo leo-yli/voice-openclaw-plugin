@@ -132,13 +132,14 @@ openclaw gateway restart
 ```bash
 cd ~/voice-openclaw-plugin
 git pull
-npm install                                    # prepare 钩子重 build
-rm -rf ~/.openclaw/extensions/xalgo_voice      # ★ OpenClaw 不会自动覆盖，必须先删
-openclaw plugins install .
+npm install                                    # 安装依赖并触发 prepare/build
+npm run build                                  # 确保 dist 是最新
+openclaw plugins install .                     # 覆盖安装同名插件，不要手动删除扩展目录
+openclaw channels add                          # 重新绑定/刷新 channelAccounts.xalgo_voice 配置
 openclaw gateway restart
 ```
 
-> 用方式 C / D 装的：拿到新版 tarball / tar.gz 后，先 `rm -rf ~/.openclaw/extensions/xalgo_voice`，再重新走对应安装步骤即可。
+> 不要手动 `rm -rf ~/.openclaw/extensions/xalgo_voice`。直接删除扩展目录会留下 stale config，导致 OpenClaw 报 `unknown channel id` / `plugin not found`。如果 install 明确提示无法覆盖，请优先使用 OpenClaw 官方 uninstall/remove 命令。
 
 ---
 

@@ -28,6 +28,10 @@ function resolveChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): XalgoA
   return Object.keys(nested).length > 0 ? nested : root;
 }
 
+function looksLikeXalgoAccount(config: XalgoAccountConfig): boolean {
+  return ["enabled", ...REQUIRED_XALGO_BINDING_FIELDS].some((key) => key in config);
+}
+
 export function ensureXalgoChannel(cfg: any): XalgoAccountConfig {
   cfg.channels ??= {};
   cfg.channels[CHANNEL_ID] ??= {};
@@ -52,8 +56,10 @@ export function ensureXalgoChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_
 }
 
 export function resolveXalgoAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): XalgoAccountConfig {
+  const direct = objectValue(cfg);
   return {
     accountId,
+    ...(looksLikeXalgoAccount(direct) ? direct : {}),
     ...objectValue(cfg?.channels?.[CHANNEL_ID]),
     ...resolveChannelAccount(cfg, accountId),
   };
