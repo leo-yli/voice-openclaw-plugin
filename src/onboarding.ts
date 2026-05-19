@@ -20,11 +20,43 @@ const PLUGIN_VERSION = "2026.5.16";
 const CHANNEL_ID = "xalgo_voice";
 const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
 
+type XalgoChannelSetupConfig = Record<string, unknown>;
+
+const REQUIRED_BINDING_FIELDS = [
+  "token",
+  "instanceId",
+  "boundAt",
+  "boundUserId",
+  "serverUrl",
+  "apiBaseUrl",
+] as const;
+
 /** 取/初始化 channel config 块 */
-function ensureChannel(cfg: any): any {
+function ensureChannel(cfg: any): XalgoChannelSetupConfig {
   cfg.channels ??= {};
   cfg.channels[CHANNEL_ID] ??= {};
   return cfg.channels[CHANNEL_ID];
+}
+
+function resolveChannel(cfg: any): XalgoChannelSetupConfig {
+  return cfg?.channels?.[CHANNEL_ID] ?? {};
+}
+
+function readNonEmptyString(channel: XalgoChannelSetupConfig, key: string): string {
+  const value = channel[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function missingBindingFields(channel: XalgoChannelSetupConfig): string[] {
+  const missing: string[] = REQUIRED_BINDING_FIELDS.filter(
+    (field) => !readNonEmptyString(channel, field),
+  );
+  if (channel.enabled !== true) missing.unshift("enabled");
+  return missing;
+}
+
+function hasCompleteBinding(channel: XalgoChannelSetupConfig): boolean {
+  return missingBindingFields(channel).length === 0;
 }
 
 /**
@@ -54,14 +86,20 @@ export const xalgoVoiceSetupWizard: any = {
     unconfiguredLabel: "需要 8 位绑定码",
     configuredHint: "已绑定到 Xalgo 账号",
     unconfiguredHint: "未绑定",
-    resolveConfigured: ({ cfg }: any) =>
-      Boolean(cfg?.channels?.[CHANNEL_ID]?.token),
+    resolveConfigured: ({ cfg }: any) => hasCompleteBinding(resolveChannel(cfg)),
     resolveStatusLines: ({ cfg, configured }: any) => {
-      const acc = cfg?.channels?.[CHANNEL_ID];
+      const channel = resolveChannel(cfg);
+      if (configured) {
+        return [
+          `Xalgo Voice: 已绑定到 ${readNonEmptyString(channel, "boundUserName") || readNonEmptyString(channel, "boundUserId") || "(未知)"}`,
+        ];
+      }
+
+      const missing = missingBindingFields(channel);
       return [
-        configured
-          ? `Xalgo Voice: 已绑定到 ${acc?.boundUserName ?? acc?.boundUserId ?? "(未知)"}`
-          : `Xalgo Voice: 未绑定（需要 8 位绑定码）`,
+        missing.length > 0
+          ? `Xalgo Voice: 未绑定或配置不完整（缺少 ${missing.join(", ")}）`
+          : "Xalgo Voice: 未绑定（需要 8 位绑定码）",
       ];
     },
   },
@@ -73,7 +111,7 @@ export const xalgoVoiceSetupWizard: any = {
       "请在 Xalgo App 点击「连接 OpenClaw」获取 8 位绑定码。",
       "绑定码 5 分钟内有效；累计失败 ≥5 次会作废，需在 App 重新生成。",
     ],
-    shouldShow: ({ cfg }: any) => !cfg?.channels?.[CHANNEL_ID]?.token,
+    shouldShow: ({ cfg }: any) => !hasCompleteBinding(resolveChannel(cfg)),
   },
 
   // ── 凭据输入（这里只收一个字段：绑定码） ────────────────────────────
@@ -86,11 +124,13 @@ export const xalgoVoiceSetupWizard: any = {
       keepPrompt: "已绑定，保留当前 Channel Token？",
       inputPrompt: "请输入 8 位绑定码（字母+数字，不区分大小写）",
       inspect: ({ cfg }: any) => {
-        const token = cfg?.channels?.[CHANNEL_ID]?.token;
+        const channel = resolveChannel(cfg);
+        const token = readNonEmptyString(channel, "token");
+        const configured = hasCompleteBinding(channel);
         return {
-          accountConfigured: Boolean(token),
+          accountConfigured: configured,
           hasConfiguredValue: Boolean(token),
-          resolvedValue: token ?? undefined,
+          resolvedValue: token || undefined,
         };
       },
       applySet: ({ cfg, resolvedValue }: any) => {
@@ -115,7 +155,7 @@ export const xalgoVoiceSetupWizard: any = {
       throw new Error(`绑定码格式不对（应为 8 位字母数字）: ${pendingCode}`);
     }
 
-    const apiBaseUrl = channel.apiBaseUrl || DEFAULT_CONFIG.apiBaseUrl;
+    const apiBaseUrl = readNonEmptyString(channel, "apiBaseUrl") || DEFAULT_CONFIG.apiBaseUrl;
     const client = createRestClient(apiBaseUrl);
 
     // instance_id：首次绑定生成 UUID v4，后续复用
@@ -180,8 +220,7 @@ export const xalgoVoiceSetupWizard: any = {
       "重启 OpenClaw 让 channel 加载新配置：",
       "  openclaw gateway restart",
     ],
-    shouldShow: ({ cfg }: any) =>
-      Boolean(cfg?.channels?.[CHANNEL_ID]?.token),
+    shouldShow: ({ cfg }: any) => hasCompleteBinding(resolveChannel(cfg)),
   },
 
   // ── 禁用 ───────────────────────────────────────────────────────────

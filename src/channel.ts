@@ -15,6 +15,30 @@ import { createRestClient, type RestClient } from "./rest-client.js";
 
 const log = createLogger("channel");
 
+const REQUIRED_BINDING_FIELDS = ["token", "instanceId", "boundAt", "boundUserId"] as const;
+
+function readConfigString(config: Record<string, unknown>, key: string): string {
+  const value = config[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function missingRuntimeBindingFields(config: Record<string, unknown>): string[] {
+  return REQUIRED_BINDING_FIELDS.filter((field) => !readConfigString(config, field));
+}
+
+function describeRuntimeConfig(config: Record<string, unknown>): string {
+  const serverUrl = readConfigString(config, "serverUrl") || "(missing)";
+  const instanceId = readConfigString(config, "instanceId");
+  const token = readConfigString(config, "token");
+  const missing = missingRuntimeBindingFields(config);
+  return [
+    `serverUrl=${serverUrl}`,
+    `token=${token ? "set" : "missing"}`,
+    `instanceId=${instanceId || "missing"}`,
+    `missing=${missing.length ? missing.join(",") : "none"}`,
+  ].join(" ");
+}
+
 export interface ChannelCallbacks {
   handleMessage: (msg: InboundMessage) => void;
   handleStatus: (status: { status: string }) => void;
@@ -209,9 +233,16 @@ export function createInboundAdapter() {
         }),
       };
       const store = createBindingStore(adapter);
+      const binding = await store.read();
+      if (!binding) {
+        log.warn(`Channel start skipped: incomplete binding ${describeRuntimeConfig(xalgoConfig)}`);
+        handleStatus({ status: "unbound" });
+        return;
+      }
+
+      log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
       channel = new XalgoVoiceChannel(xalgoConfig, store);
       await channel.start({ handleMessage, handleStatus });
-      handleStatus({ status: "ready" });
     },
 
     async stop() {
