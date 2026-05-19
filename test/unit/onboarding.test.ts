@@ -9,6 +9,14 @@ function makeCfg(channel: Record<string, unknown>) {
   };
 }
 
+function makeAccountCfg(account: Record<string, unknown>) {
+  return {
+    channelAccounts: {
+      xalgo_voice: account,
+    },
+  };
+}
+
 describe("xalgoVoiceSetupWizard configured state", () => {
   it("treats a complete enabled binding as configured", () => {
     const cfg = makeCfg({
@@ -91,5 +99,29 @@ describe("xalgoVoiceSetupWizard configured state", () => {
     expect(lines.join("\n")).toContain("boundAt");
     expect(lines.join("\n")).toContain("boundUserId");
     expect(lines.join("\n")).toContain("apiBaseUrl");
+  });
+
+  it("treats OpenClaw channel account binding as configured", () => {
+    const cfg = makeAccountCfg({
+      enabled: true,
+      token: "xvc_live_abc",
+      instanceId: "oc_123",
+      boundAt: "2026-05-19T03:39:43.192Z",
+      boundUserId: "default-user",
+      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
+      apiBaseUrl: "https://asr-test.jlpay.com",
+    });
+
+    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
+    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
+  });
+
+  it("writes pending code to channel account and legacy channel config", () => {
+    const cfg = makeCfg({});
+
+    xalgoVoiceSetupWizard.credentials[0].applySet({ cfg, resolvedValue: "abcd3456" });
+
+    expect(cfg.channels.xalgo_voice._pendingCode).toBe("ABCD3456");
+    expect((cfg as any).channelAccounts.xalgo_voice._pendingCode).toBe("ABCD3456");
   });
 });

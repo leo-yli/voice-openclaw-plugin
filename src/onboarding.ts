@@ -13,51 +13,19 @@
 
 import crypto from "node:crypto";
 import os from "node:os";
-import { createRestClient, ExchangeError } from "./rest-client.js";
+import {
+  hasCompleteXalgoBinding,
+  missingXalgoBindingFields,
+  readNonEmptyString,
+  resolveXalgoAccount,
+  setXalgoAccount,
+} from "./account-config.js";
 import { DEFAULT_CONFIG } from "./config.js";
+import { createRestClient, ExchangeError } from "./rest-client.js";
 
 const PLUGIN_VERSION = "2026.5.16";
 const CHANNEL_ID = "xalgo_voice";
 const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
-
-type XalgoChannelSetupConfig = Record<string, unknown>;
-
-const REQUIRED_BINDING_FIELDS = [
-  "token",
-  "instanceId",
-  "boundAt",
-  "boundUserId",
-  "serverUrl",
-  "apiBaseUrl",
-] as const;
-
-/** 取/初始化 channel config 块 */
-function ensureChannel(cfg: any): XalgoChannelSetupConfig {
-  cfg.channels ??= {};
-  cfg.channels[CHANNEL_ID] ??= {};
-  return cfg.channels[CHANNEL_ID];
-}
-
-function resolveChannel(cfg: any): XalgoChannelSetupConfig {
-  return cfg?.channels?.[CHANNEL_ID] ?? {};
-}
-
-function readNonEmptyString(channel: XalgoChannelSetupConfig, key: string): string {
-  const value = channel[key];
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function missingBindingFields(channel: XalgoChannelSetupConfig): string[] {
-  const missing: string[] = REQUIRED_BINDING_FIELDS.filter(
-    (field) => !readNonEmptyString(channel, field),
-  );
-  if (channel.enabled !== true) missing.unshift("enabled");
-  return missing;
-}
-
-function hasCompleteBinding(channel: XalgoChannelSetupConfig): boolean {
-  return missingBindingFields(channel).length === 0;
-}
 
 /**
  * ChannelSetupAdapter — OpenClaw 通用 setup 流程把 input 应用到 cfg 时用。
@@ -65,9 +33,8 @@ function hasCompleteBinding(channel: XalgoChannelSetupConfig): boolean {
  */
 export const xalgoVoiceSetupAdapter: any = {
   applyAccountConfig: ({ cfg, input }: any) => {
-    const channel = ensureChannel(cfg);
     if (input?.token !== undefined) {
-      channel._pendingCode = String(input.token).trim().toUpperCase();
+      setXalgoAccount(cfg, { _pendingCode: String(input.token).trim().toUpperCase() });
     }
     return cfg;
   },
@@ -86,16 +53,16 @@ export const xalgoVoiceSetupWizard: any = {
     unconfiguredLabel: "需要 8 位绑定码",
     configuredHint: "已绑定到 Xalgo 账号",
     unconfiguredHint: "未绑定",
-    resolveConfigured: ({ cfg }: any) => hasCompleteBinding(resolveChannel(cfg)),
+    resolveConfigured: ({ cfg }: any) => hasCompleteXalgoBinding(resolveXalgoAccount(cfg)),
     resolveStatusLines: ({ cfg, configured }: any) => {
-      const channel = resolveChannel(cfg);
+      const account = resolveXalgoAccount(cfg);
       if (configured) {
         return [
-          `Xalgo Voice: 已绑定到 ${readNonEmptyString(channel, "boundUserName") || readNonEmptyString(channel, "boundUserId") || "(未知)"}`,
+          `Xalgo Voice: 已绑定到 ${readNonEmptyString(account, "boundUserName") || readNonEmptyString(account, "boundUserId") || "(未知)"}`,
         ];
       }
 
-      const missing = missingBindingFields(channel);
+      const missing = missingXalgoBindingFields(account);
       return [
         missing.length > 0
           ? `Xalgo Voice: 未绑定或配置不完整（缺少 ${missing.join(", ")}）`
@@ -111,7 +78,7 @@ export const xalgoVoiceSetupWizard: any = {
       "请在 Xalgo App 点击「连接 OpenClaw」获取 8 位绑定码。",
       "绑定码 5 分钟内有效；累计失败 ≥5 次会作废，需在 App 重新生成。",
     ],
-    shouldShow: ({ cfg }: any) => !hasCompleteBinding(resolveChannel(cfg)),
+    shouldShow: ({ cfg }: any) => !hasCompleteXalgoBinding(resolveXalgoAccount(cfg)),
   },
 
   // ── 凭据输入（这里只收一个字段：绑定码） ────────────────────────────
@@ -124,9 +91,9 @@ export const xalgoVoiceSetupWizard: any = {
       keepPrompt: "已绑定，保留当前 Channel Token？",
       inputPrompt: "请输入 8 位绑定码（字母+数字，不区分大小写）",
       inspect: ({ cfg }: any) => {
-        const channel = resolveChannel(cfg);
-        const token = readNonEmptyString(channel, "token");
-        const configured = hasCompleteBinding(channel);
+        const account = resolveXalgoAccount(cfg);
+        const token = readNonEmptyString(account, "token");
+        const configured = hasCompleteXalgoBinding(account);
         return {
           accountConfigured: configured,
           hasConfiguredValue: Boolean(token),
@@ -136,8 +103,7 @@ export const xalgoVoiceSetupWizard: any = {
       applySet: ({ cfg, resolvedValue }: any) => {
         // 用户输入的"token"实际是 8 位绑定码，暂存到 _pendingCode，
         // finalize 异步钩子里做真正的 exchange。
-        const channel = ensureChannel(cfg);
-        channel._pendingCode = String(resolvedValue).trim().toUpperCase();
+        setXalgoAccount(cfg, { _pendingCode: String(resolvedValue).trim().toUpperCase() });
         return cfg;
       },
     },
@@ -145,24 +111,22 @@ export const xalgoVoiceSetupWizard: any = {
 
   // ── 完成钩子：异步换 token + 写完整 binding ─────────────────────────
   finalize: async ({ cfg }: any): Promise<{ cfg: any } | undefined> => {
-    const channel = cfg?.channels?.[CHANNEL_ID];
-    const pendingCode: string | undefined = channel?._pendingCode;
+    const account = resolveXalgoAccount(cfg);
+    const pendingCode = readNonEmptyString(account, "_pendingCode");
 
     if (!pendingCode) return undefined; // 没新输入，跳过
 
     if (!CODE_REGEX.test(pendingCode)) {
-      delete channel._pendingCode;
+      setXalgoAccount(cfg, { _pendingCode: "" });
       throw new Error(`绑定码格式不对（应为 8 位字母数字）: ${pendingCode}`);
     }
 
-    const apiBaseUrl = readNonEmptyString(channel, "apiBaseUrl") || DEFAULT_CONFIG.apiBaseUrl;
+    const apiBaseUrl = readNonEmptyString(account, "apiBaseUrl") || DEFAULT_CONFIG.apiBaseUrl;
     const client = createRestClient(apiBaseUrl);
 
     // instance_id：首次绑定生成 UUID v4，后续复用
     const instanceId =
-      typeof channel.instanceId === "string" && channel.instanceId
-        ? channel.instanceId
-        : `oc_${crypto.randomUUID()}`;
+      readNonEmptyString(account, "instanceId") || `oc_${crypto.randomUUID()}`;
 
     let resp;
     try {
@@ -173,7 +137,7 @@ export const xalgoVoiceSetupWizard: any = {
         pluginVersion: PLUGIN_VERSION,
       });
     } catch (err) {
-      delete channel._pendingCode;
+      setXalgoAccount(cfg, { _pendingCode: "" });
       if (err instanceof ExchangeError) {
         // endpoint_unsupported 是常见的"对接早期"错误，给一条人话提示
         if (err.type === "endpoint_unsupported") {
@@ -198,16 +162,18 @@ export const xalgoVoiceSetupWizard: any = {
     }
 
     // exchange 成功 → 写入完整 binding 字段
-    channel.enabled = true;
-    channel.token = resp.channelToken;
-    channel.instanceId = instanceId;
-    channel.boundAt = new Date().toISOString();
-    channel.boundUserId = resp.userId;
-    channel.boundUserName = resp.userDisplayName;
-    channel.serverUrl = resp.wsUrl;
-    channel.apiBaseUrl = apiBaseUrl;
-    channel.deviceLabel = `OpenClaw on ${os.hostname()}`;
-    delete channel._pendingCode;
+    setXalgoAccount(cfg, {
+      enabled: true,
+      token: resp.channelToken,
+      instanceId,
+      boundAt: new Date().toISOString(),
+      boundUserId: resp.userId,
+      boundUserName: resp.userDisplayName,
+      serverUrl: resp.wsUrl,
+      apiBaseUrl,
+      deviceLabel: `OpenClaw on ${os.hostname()}`,
+      _pendingCode: "",
+    });
 
     return { cfg };
   },
@@ -220,13 +186,12 @@ export const xalgoVoiceSetupWizard: any = {
       "重启 OpenClaw 让 channel 加载新配置：",
       "  openclaw gateway restart",
     ],
-    shouldShow: ({ cfg }: any) => hasCompleteBinding(resolveChannel(cfg)),
+    shouldShow: ({ cfg }: any) => hasCompleteXalgoBinding(resolveXalgoAccount(cfg)),
   },
 
   // ── 禁用 ───────────────────────────────────────────────────────────
   disable: (cfg: any) => {
-    const channel = ensureChannel(cfg);
-    channel.enabled = false;
+    setXalgoAccount(cfg, { enabled: false });
     return cfg;
   },
 };

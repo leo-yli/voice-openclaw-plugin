@@ -18,6 +18,23 @@ function makeCompleteConfig() {
   };
 }
 
+function makeCompleteAccountConfig() {
+  return {
+    channelAccounts: {
+      xalgo_voice: {
+        enabled: true,
+        token: "xvc_live_abc",
+        instanceId: "oc_123",
+        boundAt: "2026-05-19T03:39:43.192Z",
+        boundUserId: "default-user",
+        serverUrl: "ws://127.0.0.1:1",
+        apiBaseUrl: "https://asr-test.jlpay.com",
+        reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
+      },
+    },
+  };
+}
+
 function makeReadConfig(channel: Record<string, unknown>) {
   return async (key: string) => {
     const field = key.split(".").pop()!;
@@ -72,5 +89,25 @@ describe("createInboundAdapter startup", () => {
     await adapter.stop();
 
     expect(statuses).toEqual(["unbound"]);
+  });
+
+  it("starts from OpenClaw channel account config", async () => {
+    const config = makeCompleteAccountConfig();
+    const statuses: string[] = [];
+    const adapter = createInboundAdapter();
+
+    await adapter.start({
+      config,
+      account: config.channelAccounts.xalgo_voice,
+      handleMessage: () => {},
+      handleStatus: (status) => statuses.push(status.status),
+      readConfig: makeReadConfig(config.channelAccounts.xalgo_voice),
+      writeConfig: async () => {},
+    } as any);
+
+    await adapter.stop();
+
+    expect(statuses).toContain("connecting");
+    expect(statuses).not.toContain("ready");
   });
 });

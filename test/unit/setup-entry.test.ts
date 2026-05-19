@@ -57,6 +57,9 @@ describe("setup-entry", () => {
 
     expect(storage["channels.xalgo_voice.token"]).toBe("xvc_live_xyz");
     expect(storage["channels.xalgo_voice.boundUserId"]).toBe("u_1");
+    expect(storage["channelAccounts.xalgo_voice.token"]).toBe("xvc_live_xyz");
+    expect(storage["channelAccounts.xalgo_voice.boundUserId"]).toBe("u_1");
+    expect(storage["channelAccounts.xalgo_voice.serverUrl"]).toBe("wss://example.com/ws");
     expect(typeof storage["channels.xalgo_voice.instanceId"]).toBe("string");
     expect((storage["channels.xalgo_voice.instanceId"] as string).startsWith("oc_")).toBe(true);
     expect(logs.some((l) => l.includes("绑定成功") || l.includes("已保存"))).toBe(true);

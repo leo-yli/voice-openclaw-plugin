@@ -1,4 +1,9 @@
 import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
+import {
+  missingXalgoBindingFields,
+  readNonEmptyString,
+  resolveXalgoAccount,
+} from "./account-config.js";
 import { type XalgoVoiceConfig, resolveConfig } from "./config.js";
 import { XvcClient, type ConnectionStatus } from "./client.js";
 import { parseInboundMessage, type InboundMessage } from "./inbound.js";
@@ -15,22 +20,11 @@ import { createRestClient, type RestClient } from "./rest-client.js";
 
 const log = createLogger("channel");
 
-const REQUIRED_BINDING_FIELDS = ["token", "instanceId", "boundAt", "boundUserId"] as const;
-
-function readConfigString(config: Record<string, unknown>, key: string): string {
-  const value = config[key];
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function missingRuntimeBindingFields(config: Record<string, unknown>): string[] {
-  return REQUIRED_BINDING_FIELDS.filter((field) => !readConfigString(config, field));
-}
-
 function describeRuntimeConfig(config: Record<string, unknown>): string {
-  const serverUrl = readConfigString(config, "serverUrl") || "(missing)";
-  const instanceId = readConfigString(config, "instanceId");
-  const token = readConfigString(config, "token");
-  const missing = missingRuntimeBindingFields(config);
+  const serverUrl = readNonEmptyString(config, "serverUrl") || "(missing)";
+  const instanceId = readNonEmptyString(config, "instanceId");
+  const token = readNonEmptyString(config, "token");
+  const missing = missingXalgoBindingFields(config);
   return [
     `serverUrl=${serverUrl}`,
     `token=${token ? "set" : "missing"}`,
@@ -216,7 +210,7 @@ export function createInboundAdapter() {
   let channel: XalgoVoiceChannel | null = null;
 
   return {
-    async start({ config, handleMessage, handleStatus, readConfig, writeConfig }: {
+    async start({ config, account, handleMessage, handleStatus, readConfig, writeConfig }: {
       config: any;
       account?: any;
       handleMessage: (msg: InboundMessage) => void;
@@ -225,7 +219,8 @@ export function createInboundAdapter() {
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
-      const xalgoConfig = config.channels?.xalgo_voice ?? config;
+      const xalgoConfig = resolveXalgoAccount({ ...config, channelAccounts: config.channelAccounts }, account?.accountId);
+      Object.assign(xalgoConfig, account ?? {});
       const adapter: StoreAdapter = {
         read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
         write: writeConfig ?? (async () => {
@@ -241,7 +236,7 @@ export function createInboundAdapter() {
       }
 
       log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
-      channel = new XalgoVoiceChannel(xalgoConfig, store);
+      channel = new XalgoVoiceChannel(xalgoConfig as Partial<XalgoVoiceConfig> & { token: string }, store);
       await channel.start({ handleMessage, handleStatus });
     },
 
@@ -260,7 +255,7 @@ export const outbound = {
   listAccountIds: () => ["default"],
 
   resolveAccount: (config: any, accountId?: string) => {
-    return config.channels?.xalgo_voice ?? { accountId: accountId ?? "default" };
+    return resolveXalgoAccount(config, accountId);
   },
 
   async sendText({ account, config, text, context }: {

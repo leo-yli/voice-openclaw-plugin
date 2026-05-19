@@ -1,4 +1,5 @@
 import type { OpenClawApi } from "openclaw";
+import { resolveXalgoAccount } from "./src/account-config.js";
 import { createInboundAdapter, outbound } from "./src/channel.js";
 import {
   xalgoVoiceSetupWizard,
@@ -49,7 +50,7 @@ const plugin = {
         config: {
           listAccountIds: () => ["default"],
           resolveAccount: (cfg: any, accountId?: string) =>
-            cfg.channels?.xalgo_voice ?? { accountId: accountId ?? "default" },
+            resolveXalgoAccount(cfg, accountId),
         },
         outbound,
         inbound: createInboundAdapter(),
@@ -81,7 +82,7 @@ function warnIfUnbound(api: OpenClawApi): void {
       typeof runtime?.getConfig === "function"
         ? runtime.getConfig()
         : (api as any).config ?? {};
-    token = cfg?.channels?.xalgo_voice?.token;
+    token = resolveXalgoAccount(cfg).token as string | undefined;
   } catch {
     /* ignore */
   }
