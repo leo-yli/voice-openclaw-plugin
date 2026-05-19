@@ -134,12 +134,14 @@ cd ~/voice-openclaw-plugin
 git pull
 npm install                                    # 安装依赖并触发 prepare/build
 npm run build                                  # 确保 dist 是最新
-openclaw plugins install .                     # 覆盖安装同名插件，不要手动删除扩展目录
+openclaw plugins uninstall xalgo_voice         # 先让 OpenClaw 清理 config / install record / channel config
+rm -rf ~/.openclaw/extensions/xalgo_voice      # uninstall 后再删除残留安装目录
+openclaw plugins install .                     # 重新安装新版插件
 openclaw channels add                          # 重新绑定/刷新 channelAccounts.xalgo_voice 配置
 openclaw gateway restart
 ```
 
-> 不要手动 `rm -rf ~/.openclaw/extensions/xalgo_voice`。直接删除扩展目录会留下 stale config，导致 OpenClaw 报 `unknown channel id` / `plugin not found`。如果 install 明确提示无法覆盖，请优先使用 OpenClaw 官方 uninstall/remove 命令。
+> 不要在 `openclaw plugins uninstall xalgo_voice` 之前直接删除 `~/.openclaw/extensions/xalgo_voice`。直接删除扩展目录会留下 stale config，导致 OpenClaw 报 `unknown channel id` / `plugin not found`。如果 install 提示 `plugin already exists`，先执行官方 uninstall，再删除残留目录并重新 install。
 
 ---
 
