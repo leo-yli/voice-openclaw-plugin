@@ -25,7 +25,7 @@ import { createRestClient, ExchangeError } from "./rest-client.js";
 
 const PLUGIN_VERSION = "2026.5.16";
 const CHANNEL_ID = "xalgo_voice";
-const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
+const CODE_REGEX = /^[A-Z0-9]{8}$/i;
 
 /**
  * ChannelSetupAdapter — OpenClaw 通用 setup 流程把 input 应用到 cfg 时用。

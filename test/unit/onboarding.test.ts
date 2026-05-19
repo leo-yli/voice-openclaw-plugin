@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { xalgoVoiceSetupWizard } from "../../src/onboarding.js";
 
 function makeCfg(channel: Record<string, unknown>) {
@@ -114,6 +114,28 @@ describe("xalgoVoiceSetupWizard configured state", () => {
 
     expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
     expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
+  });
+
+  it("accepts app-generated binding codes containing U", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            channel_token: "xvc_live_xyz",
+            user_id: "u_1",
+            user_display_name: "杨立",
+            ws_url: "wss://example.com/ws",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      ),
+    );
+    const cfg = makeCfg({ _pendingCode: "6UM73YKK" });
+
+    await expect(xalgoVoiceSetupWizard.finalize({ cfg })).resolves.toBeDefined();
+    expect(cfg.channels.xalgo_voice.token).toBe("xvc_live_xyz");
+    vi.unstubAllGlobals();
   });
 
   it("writes pending code to channel config only", () => {

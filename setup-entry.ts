@@ -10,7 +10,7 @@ const log = createLogger("setup");
 const PLUGIN_VERSION = "2026.5.16";
 /** API Server 默认地址，与运行时配置 (DEFAULT_CONFIG.apiBaseUrl) 共用同一个 source of truth */
 const DEFAULT_API_BASE_URL = DEFAULT_CONFIG.apiBaseUrl;
-const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
+const CODE_REGEX = /^[A-Z0-9]{8}$/i;
 // Base32 字符集 - 0/O/1/I/L/S/2/Z，再去掉 U/W 防混淆
 
 const ERROR_MESSAGES: Record<ExchangeErrorType, string> = {

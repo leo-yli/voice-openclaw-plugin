@@ -32,7 +32,7 @@ import { DEFAULT_CONFIG } from "../src/config.js";
 
 const PLUGIN_VERSION = "2026.5.16";
 const CHANNEL_KEY = "xalgo_voice";
-const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
+const CODE_REGEX = /^[A-Z0-9]{8}$/i;
 const CONFIG_PATH = join(homedir(), ".openclaw", "openclaw.json");
 
 interface ChannelConfig {
