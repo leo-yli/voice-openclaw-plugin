@@ -18,6 +18,10 @@ import { createBindingStore, type StoreAdapter } from "./binding-store.js";
 import { createControlEventHandler, type ControlEventHandler } from "./control-events.js";
 import { createRestClient, type RestClient } from "./rest-client.js";
 
+interface GatewayStatusSink {
+  (status: Record<string, unknown>): void;
+}
+
 const log = createLogger("channel");
 
 function describeRuntimeConfig(config: Record<string, unknown>): string {
@@ -247,6 +251,162 @@ export function createInboundAdapter() {
       }
     },
   };
+}
+
+export function createGatewayAdapter() {
+  return {
+    async startAccount(ctx: {
+      cfg: any;
+      account: any;
+      accountId: string;
+      abortSignal: AbortSignal;
+      log?: { info?: (message: string) => void; warn?: (message: string) => void; error?: (message: string) => void };
+      runtime?: any;
+      setStatus: GatewayStatusSink;
+    }) {
+      const statusSink: GatewayStatusSink = (patch) =>
+        ctx.setStatus({ accountId: ctx.accountId, ...patch });
+      const adapter = createInboundAdapter();
+      const stopOnAbort = async () => {
+        await adapter.stop();
+        statusSink({ connected: false });
+      };
+
+      statusSink({ connected: false, lastTransportActivityAt: null });
+      await adapter.start({
+        config: ctx.cfg,
+        account: ctx.account,
+        handleMessage: (message) => {
+          statusSink({ lastEventAt: Date.now(), lastTransportActivityAt: Date.now() });
+          dispatchGatewayInboundMessage(ctx, message).catch((err) => {
+            const msg = err instanceof Error ? err.message : String(err);
+            ctx.log?.error?.(`[${ctx.accountId}] inbound dispatch failed: ${msg}`);
+            statusSink({ lastError: msg });
+          });
+        },
+        handleStatus: (status) => {
+          applyGatewayConnectionStatus(statusSink, status.status);
+        },
+        writeConfig: async () => {
+          ctx.log?.warn?.(`[${ctx.accountId}] writeConfig not provided by OpenClaw gateway runtime`);
+        },
+      });
+
+      if (ctx.abortSignal.aborted) {
+        await stopOnAbort();
+        return;
+      }
+
+      ctx.abortSignal.addEventListener("abort", () => {
+        stopOnAbort().catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          ctx.log?.error?.(`[${ctx.accountId}] channel stop failed: ${msg}`);
+        });
+      }, { once: true });
+
+      await new Promise<void>((resolve) => {
+        ctx.abortSignal.addEventListener("abort", () => resolve(), { once: true });
+      });
+    },
+  };
+}
+
+function applyGatewayConnectionStatus(statusSink: GatewayStatusSink, status: string): void {
+  const now = Date.now();
+  switch (status) {
+    case "connected":
+      statusSink({ connected: true, lastConnectedAt: now, lastEventAt: now, lastTransportActivityAt: now, lastError: null });
+      break;
+    case "connecting":
+      statusSink({ connected: false, lastTransportActivityAt: now });
+      break;
+    case "disconnected":
+      statusSink({ connected: false });
+      break;
+    case "auth_failed":
+    case "unbound":
+      statusSink({ connected: false, lastError: status });
+      break;
+  }
+}
+
+async function dispatchGatewayInboundMessage(ctx: {
+  cfg: any;
+  account: any;
+  accountId: string;
+  runtime?: any;
+}, message: InboundMessage): Promise<void> {
+  const runtime = ctx.runtime;
+  const reply = runtime?.channel?.reply;
+  const turn = runtime?.channel?.turn;
+  const session = runtime?.channel?.session;
+  const recordInboundSession = session?.recordInboundSession;
+  const dispatchReply = reply?.dispatchReplyWithBufferedBlockDispatcher;
+  const createPipeline = reply?.createChannelMessageReplyPipeline ?? reply?.createChannelReplyPipeline;
+  const runPrepared = turn?.runPrepared;
+  const resolveStorePath = session?.resolveStorePath;
+
+  if (!reply?.finalizeInboundContext || !dispatchReply || !createPipeline || !runPrepared || !recordInboundSession || !resolveStorePath) {
+    return;
+  }
+
+  const storePath = resolveStorePath(ctx.cfg?.session?.store, { agentId: "default" });
+  const ctxPayload = reply.finalizeInboundContext({
+    Body: message.text,
+    BodyForAgent: message.text,
+    RawBody: message.text,
+    CommandBody: message.text,
+    From: message.sender.id,
+    To: message.conversationId,
+    SessionKey: `${ctx.accountId}:${message.conversationId}`,
+    AccountId: ctx.accountId,
+    ChatType: message.conversationType,
+    WasMentioned: message.conversationType === "direct" ? undefined : true,
+    ConversationLabel: message.conversationType === "direct" ? message.sender.name : message.conversationId,
+    GroupChannel: message.conversationType === "group" ? message.conversationId : undefined,
+    NativeChannelId: message.conversationId,
+    SenderName: message.sender.name,
+    SenderId: message.sender.id,
+    Provider: "xalgo_voice",
+    Surface: "xalgo_voice",
+    MessageSid: message.id,
+    MessageSidFull: message.id,
+    ReplyToId: message.id,
+    Timestamp: message.timestamp,
+    OriginatingChannel: "xalgo_voice",
+    OriginatingTo: message.conversationId,
+    CommandAuthorized: true,
+  });
+  const { onModelSelected, ...replyPipeline } = createPipeline({
+    cfg: ctx.cfg,
+    agentId: "default",
+    channel: "xalgo_voice",
+    accountId: ctx.accountId,
+  });
+
+  await runPrepared({
+    channel: "xalgo_voice",
+    accountId: ctx.accountId,
+    routeSessionKey: ctxPayload.SessionKey,
+    storePath,
+    ctxPayload,
+    recordInboundSession,
+    runDispatch: async () => await dispatchReply({
+      ctx: ctxPayload,
+      cfg: ctx.cfg,
+      dispatcherOptions: {
+        ...replyPipeline,
+        deliver: async (payload: any) => {
+          const text = payload && typeof payload === "object" && "text" in payload ? String(payload.text ?? "") : "";
+          if (!text.trim()) return;
+        },
+        onError: (error: unknown) => {
+          throw error instanceof Error ? error : new Error(String(error));
+        },
+      },
+      replyOptions: { onModelSelected },
+    }),
+  });
 }
 
 export const outbound = {

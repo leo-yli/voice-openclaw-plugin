@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import plugin from "../../index.js";
 import { resolveXalgoAccount } from "../../src/account-config.js";
-import { createInboundAdapter } from "../../src/channel.js";
+import { createGatewayAdapter, createInboundAdapter } from "../../src/channel.js";
 
 function makeCompleteConfig() {
   return {
@@ -79,6 +79,18 @@ describe("OpenClaw channel config hooks", () => {
     const account = channelPlugin.config.resolveAccount(config, "default");
 
     expect(channelPlugin.config.isConfigured(account, config)).toBe(true);
+  });
+
+  it("registers a gateway account adapter so OpenClaw can run the channel", () => {
+    let channelPlugin: any;
+
+    plugin.register({
+      registerChannel: vi.fn(({ plugin }) => {
+        channelPlugin = plugin;
+      }),
+    } as any);
+
+    expect(channelPlugin.gateway?.startAccount).toEqual(expect.any(Function));
   });
 });
 

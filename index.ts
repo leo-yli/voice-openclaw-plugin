@@ -3,7 +3,11 @@ import {
   hasCompleteXalgoBinding,
   resolveXalgoAccount,
 } from "./src/account-config.js";
-import { createInboundAdapter, outbound } from "./src/channel.js";
+import {
+  createGatewayAdapter,
+  createInboundAdapter,
+  outbound,
+} from "./src/channel.js";
 import {
   xalgoVoiceSetupWizard,
   xalgoVoiceSetupAdapter,
@@ -59,6 +63,7 @@ const plugin = {
         },
         outbound,
         inbound: createInboundAdapter(),
+        gateway: createGatewayAdapter(),
         // ★ 关键：声明式 setup wizard，'openclaw channels add' 命令会用
         //   到这两个字段来 prompt 用户输入 8 位绑定码并完成 exchange。
         //   参考 wecom-openclaw-plugin 的同款实现方式。
