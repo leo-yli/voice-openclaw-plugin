@@ -73,6 +73,8 @@ export class MockXalgoServer {
   sendInboundMessage(text: string, userId: string = "u123"): void {
     this.sendToAll(createEvent("inbound_message", {
       message_id: `msg_${Date.now()}`,
+      session_id: "voice_session_test",
+      agent_binding_id: "agent_binding_test",
       chat_id: `xalgo:user:${userId}`,
       chat_type: "direct",
       sender: { id: userId, name: "Test User" },

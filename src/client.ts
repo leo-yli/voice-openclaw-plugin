@@ -11,6 +11,7 @@ import {
   type ConnectedPayload,
   type ResumePayload,
   type PingPayload,
+  type PongPayload,
 } from "./protocol.js";
 
 const log = createLogger("client");
@@ -20,6 +21,7 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "au
 export interface ClientEvents {
   onEvent: (event: XvcEvent) => void;
   onStatusChange: (status: ConnectionStatus) => void;
+  onTransportActivity?: () => void;
   onControlEvent?: (event: XvcEvent) => void;
   onBindingMissing?: () => void;
 }
@@ -99,6 +101,7 @@ export class XvcClient {
   }
 
   disconnect(): void {
+    this.disableReconnect();
     this.reconnect.cancel();
     this.stopHeartbeat();
     if (this.ws) {
@@ -171,6 +174,7 @@ export class XvcClient {
     }
 
     this.reconnect.recordEventId(event.event_id);
+    this.events.onTransportActivity?.();
 
     switch (event.type) {
       case "connected": {
@@ -193,6 +197,12 @@ export class XvcClient {
       case "pong": {
         this.missedPongs = 0;
         break;
+      }
+      case "ping": {
+        const payload = event.payload as PingPayload;
+        const pong: PongPayload = { ts: payload.ts ?? Date.now() };
+        this.send(createEvent("pong", pong));
+        return;
       }
       case "error": {
         this.handleErrorEvent(event.payload as { code: string; message: string; reason?: string });
@@ -221,6 +231,12 @@ export class XvcClient {
     if (errPayload.code === "AUTH_FAILED") {
       const reason = errPayload.reason ?? "token_invalid";
       log.error(`Authentication failed: reason=${reason}, message=${errPayload.message}`);
+
+      if (this.shouldFallbackToFreshConnect(reason, errPayload.message)) {
+        this.retryFreshConnectAfterResumeFailure(errPayload.message);
+        return;
+      }
+
       this.setStatus("auth_failed");
       this.disableReconnect();
 
@@ -247,6 +263,29 @@ export class XvcClient {
       return;
     }
     log.error(`Server error: ${errPayload.code} - ${errPayload.message}`);
+  }
+
+  private shouldFallbackToFreshConnect(reason: string, message: string): boolean {
+    if (!this.reconnect.shouldResume) return false;
+    const normalized = message.toLowerCase();
+    return (
+      reason === "protocol_error" ||
+      reason === "resume_failed" ||
+      normalized.includes("first frame must be connect") ||
+      normalized.includes("resume")
+    );
+  }
+
+  private retryFreshConnectAfterResumeFailure(message: string): void {
+    log.warn(`Resume rejected by server, falling back to fresh connect: ${message}`);
+    this.reconnect.clearSession();
+    this.stopHeartbeat();
+    this.setStatus("disconnected");
+    if (this.ws) {
+      this.ws.close(1000, "retry fresh connect");
+      this.ws = null;
+    }
+    this.scheduleReconnect();
   }
 
   private handleClose(code: number, reason: string): void {

@@ -14,6 +14,8 @@ describe("inbound", () => {
   it("converts inbound_message to OpenClaw InboundMessage", () => {
     const event = makeEvent({
       message_id: "msg_001",
+      session_id: "voice_session_001",
+      agent_binding_id: "agent_binding_001",
       chat_id: "xalgo:user:u123",
       chat_type: "direct",
       sender: { id: "u123", name: "杨立" },
@@ -32,6 +34,8 @@ describe("inbound", () => {
 
     expect(result).not.toBeNull();
     expect(result!.id).toBe("msg_001");
+    expect(result!.sessionId).toBe("voice_session_001");
+    expect(result!.agentBindingId).toBe("agent_binding_001");
     expect(result!.text).toBe("帮我看看今天有什么待办");
     expect(result!.sender.id).toBe("u123");
     expect(result!.sender.name).toBe("杨立");
@@ -54,6 +58,38 @@ describe("inbound", () => {
     const result = parseInboundMessage(event);
     expect(result).not.toBeNull();
     expect(result!.text).toBe("hello");
+  });
+
+  it("accepts common ASR transcript field names", () => {
+    const event = makeEvent({
+      message_id: "msg_004",
+      chat_id: "xalgo:user:u456",
+      chat_type: "direct",
+      sender: { id: "u456", name: "Test" },
+      text: "",
+      transcript: "从 transcript 来的语音文本",
+      metadata: { input_type: "voice" },
+    } as InboundMessagePayload);
+
+    const result = parseInboundMessage(event);
+    expect(result).not.toBeNull();
+    expect(result!.text).toBe("从 transcript 来的语音文本");
+  });
+
+  it("accepts nested ASR result text", () => {
+    const event = makeEvent({
+      message_id: "msg_005",
+      chat_id: "xalgo:user:u456",
+      chat_type: "direct",
+      sender: { id: "u456", name: "Test" },
+      text: "",
+      result: { text: "从 result.text 来的语音文本" },
+      metadata: { input_type: "voice" },
+    } as InboundMessagePayload);
+
+    const result = parseInboundMessage(event);
+    expect(result).not.toBeNull();
+    expect(result!.text).toBe("从 result.text 来的语音文本");
   });
 
   it("returns null for empty text", () => {

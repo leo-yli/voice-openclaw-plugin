@@ -6,7 +6,7 @@ import {
 } from "./account-config.js";
 import { type XalgoVoiceConfig, resolveConfig } from "./config.js";
 import { XvcClient, type ConnectionStatus } from "./client.js";
-import { parseInboundMessage, type InboundMessage } from "./inbound.js";
+import { describeInboundPayloadShape, parseInboundMessage, type InboundMessage } from "./inbound.js";
 import { formatOutboundMessage } from "./outbound.js";
 import { StreamingManager } from "./streaming.js";
 import { ConfirmationManager } from "./confirmation.js";
@@ -21,6 +21,13 @@ import { createRestClient, type RestClient } from "./rest-client.js";
 interface GatewayStatusSink {
   (status: Record<string, unknown>): void;
 }
+
+interface ReplyRouteContext {
+  sessionId?: string;
+  agentBindingId?: string;
+}
+
+type GatewayReplySender = (text: string, replyTo: string, chatId: string, route?: ReplyRouteContext) => void;
 
 const log = createLogger("channel");
 
@@ -40,6 +47,7 @@ function describeRuntimeConfig(config: Record<string, unknown>): string {
 export interface ChannelCallbacks {
   handleMessage: (msg: InboundMessage) => void;
   handleStatus: (status: { status: string }) => void;
+  handleTransportActivity?: () => void;
 }
 
 export class XalgoVoiceChannel {
@@ -81,6 +89,7 @@ export class XalgoVoiceChannel {
       {
         onEvent: (event) => this.dispatchEvent(event),
         onStatusChange: (status) => this.handleStatusChange(status),
+        onTransportActivity: () => this.callbacks?.handleTransportActivity?.(),
         onControlEvent: (event) => this.dispatchControlEvent(event),
       },
       bindingStore
@@ -107,11 +116,12 @@ export class XalgoVoiceChannel {
     this.callbacks = null;
   }
 
-  sendReply(text: string, replyTo: string, chatId: string): void {
+  sendReply(text: string, replyTo: string, chatId: string, route: ReplyRouteContext = {}): void {
     const messageId = `reply_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
     if (this.config.streaming) {
-      const session = this.streaming.startStream(messageId, chatId);
+      log.info(`Sending outbound_delta reply: msg=${messageId} session=${route.sessionId ?? "(none)"} replyTo=${replyTo} chat=${chatId} textLength=${text.length}`);
+      const session = this.streaming.startStream(messageId, chatId, route);
       const delta = this.streaming.pushDelta(messageId, text);
       if (delta) this.client.send(delta);
       const final = this.streaming.endStream(messageId);
@@ -119,11 +129,14 @@ export class XalgoVoiceChannel {
     } else {
       const event = formatOutboundMessage({
         messageId,
+        sessionId: route.sessionId,
+        agentBindingId: route.agentBindingId,
         chatId,
         replyTo,
         text,
         replyMode: this.config.replyMode,
       });
+      log.info(`Sending outbound_message reply: msg=${messageId} session=${route.sessionId ?? "(none)"} replyTo=${replyTo} chat=${chatId} textLength=${text.length}`);
       this.client.send(event);
     }
 
@@ -165,9 +178,10 @@ export class XalgoVoiceChannel {
   private handleInbound(event: XvcEvent<InboundMessagePayload>): void {
     const msg = parseInboundMessage(event);
     if (!msg) {
-      log.warn("Failed to parse inbound message, skipping");
+      log.warn(`Failed to parse inbound message, skipping: ${describeInboundPayloadShape(event)}`);
       return;
     }
+    log.info(`Inbound message accepted: id=${msg.id} chat=${msg.conversationId} textLength=${msg.text.length}`);
     this.callbacks?.handleMessage(msg);
   }
 
@@ -214,12 +228,13 @@ export function createInboundAdapter() {
   let channel: XalgoVoiceChannel | null = null;
 
   return {
-    async start({ config, account, handleMessage, handleStatus, readConfig, writeConfig }: {
+    async start({ config, account, handleMessage, handleStatus, handleTransportActivity, readConfig, writeConfig }: {
       config: any;
       account?: any;
       handleMessage: (msg: InboundMessage) => void;
       handleEvent?: (event: any) => void;
       handleStatus: (status: { status: string }) => void;
+      handleTransportActivity?: () => void;
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
@@ -241,7 +256,7 @@ export function createInboundAdapter() {
 
       log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
       channel = new XalgoVoiceChannel(xalgoConfig as Partial<XalgoVoiceConfig> & { token: string }, store);
-      await channel.start({ handleMessage, handleStatus });
+      await channel.start({ handleMessage, handleStatus, handleTransportActivity });
     },
 
     async stop() {
@@ -249,6 +264,14 @@ export function createInboundAdapter() {
         await channel.stop();
         channel = null;
       }
+    },
+
+    sendReply(text: string, replyTo: string, chatId: string, route: ReplyRouteContext = {}): void {
+      if (!channel) {
+        log.warn("Cannot send reply, channel not started");
+        return;
+      }
+      channel.sendReply(text, replyTo, chatId, route);
     },
   };
 }
@@ -262,12 +285,41 @@ export function createGatewayAdapter() {
       abortSignal: AbortSignal;
       log?: { info?: (message: string) => void; warn?: (message: string) => void; error?: (message: string) => void };
       runtime?: any;
+      channelRuntime?: any;
       setStatus: GatewayStatusSink;
     }) {
+      log.info(`Gateway startAccount requested: account=${ctx.accountId}`);
       const statusSink: GatewayStatusSink = (patch) =>
         ctx.setStatus({ accountId: ctx.accountId, ...patch });
       const adapter = createInboundAdapter();
+      const activeDispatches = new Set<string>();
+      const pendingMessages = new Map<string, InboundMessage>();
+      const sessionKeyFor = (message: InboundMessage) => `${ctx.accountId}:${message.conversationId}`;
+      const dispatchMessage = async (message: InboundMessage): Promise<void> => {
+        const sessionKey = sessionKeyFor(message);
+        if (activeDispatches.has(sessionKey)) {
+          pendingMessages.set(sessionKey, message);
+          log.info(`OpenClaw dispatch already active, queued latest inbound: msg=${message.id} session=${sessionKey}`);
+          return;
+        }
+
+        activeDispatches.add(sessionKey);
+        try {
+          await dispatchGatewayInboundMessage(ctx, message, (text, replyTo, chatId, route) => {
+            adapter.sendReply(text, replyTo, chatId, route);
+          });
+        } finally {
+          activeDispatches.delete(sessionKey);
+          const pending = pendingMessages.get(sessionKey);
+          if (pending) {
+            pendingMessages.delete(sessionKey);
+            void dispatchMessage(pending);
+          }
+        }
+      };
       const stopOnAbort = async () => {
+        pendingMessages.clear();
+        activeDispatches.clear();
         await adapter.stop();
         statusSink({ connected: false });
       };
@@ -278,7 +330,7 @@ export function createGatewayAdapter() {
         account: ctx.account,
         handleMessage: (message) => {
           statusSink({ lastEventAt: Date.now(), lastTransportActivityAt: Date.now() });
-          dispatchGatewayInboundMessage(ctx, message).catch((err) => {
+          dispatchMessage(message).catch((err) => {
             const msg = err instanceof Error ? err.message : String(err);
             ctx.log?.error?.(`[${ctx.accountId}] inbound dispatch failed: ${msg}`);
             statusSink({ lastError: msg });
@@ -286,6 +338,9 @@ export function createGatewayAdapter() {
         },
         handleStatus: (status) => {
           applyGatewayConnectionStatus(statusSink, status.status);
+        },
+        handleTransportActivity: () => {
+          statusSink({ lastTransportActivityAt: Date.now() });
         },
         writeConfig: async () => {
           ctx.log?.warn?.(`[${ctx.accountId}] writeConfig not provided by OpenClaw gateway runtime`);
@@ -335,22 +390,34 @@ async function dispatchGatewayInboundMessage(ctx: {
   account: any;
   accountId: string;
   runtime?: any;
-}, message: InboundMessage): Promise<void> {
-  const runtime = ctx.runtime;
-  const reply = runtime?.channel?.reply;
-  const turn = runtime?.channel?.turn;
-  const session = runtime?.channel?.session;
+  channelRuntime?: any;
+}, message: InboundMessage, sendReply: GatewayReplySender): Promise<void> {
+  const runtime = ctx.channelRuntime ?? ctx.runtime;
+  const channelRuntime = runtime?.channel ?? runtime;
+  const reply = channelRuntime?.reply;
+  const turn = channelRuntime?.turn;
+  const session = channelRuntime?.session;
   const recordInboundSession = session?.recordInboundSession;
   const dispatchReply = reply?.dispatchReplyWithBufferedBlockDispatcher;
-  const createPipeline = reply?.createChannelMessageReplyPipeline ?? reply?.createChannelReplyPipeline;
   const runPrepared = turn?.runPrepared;
   const resolveStorePath = session?.resolveStorePath;
 
-  if (!reply?.finalizeInboundContext || !dispatchReply || !createPipeline || !runPrepared || !recordInboundSession || !resolveStorePath) {
+  const missing = [
+    !reply?.finalizeInboundContext ? "reply.finalizeInboundContext" : "",
+    !dispatchReply ? "reply.dispatchReplyWithBufferedBlockDispatcher" : "",
+    !runPrepared ? "turn.runPrepared" : "",
+    !recordInboundSession ? "session.recordInboundSession" : "",
+    !resolveStorePath ? "session.resolveStorePath" : "",
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    log.warn(`Cannot dispatch inbound to OpenClaw, missing runtime APIs: ${missing.join(",")}`);
     return;
   }
 
-  const storePath = resolveStorePath(ctx.cfg?.session?.store, { agentId: "default" });
+  const agentId = typeof ctx.account?.agentId === "string" && ctx.account.agentId.trim()
+    ? ctx.account.agentId.trim()
+    : "default";
+  const storePath = resolveStorePath(ctx.cfg?.session?.store, { agentId });
   const ctxPayload = reply.finalizeInboundContext({
     Body: message.text,
     BodyForAgent: message.text,
@@ -377,13 +444,8 @@ async function dispatchGatewayInboundMessage(ctx: {
     OriginatingTo: message.conversationId,
     CommandAuthorized: true,
   });
-  const { onModelSelected, ...replyPipeline } = createPipeline({
-    cfg: ctx.cfg,
-    agentId: "default",
-    channel: "xalgo_voice",
-    accountId: ctx.accountId,
-  });
 
+  log.info(`Dispatching inbound to OpenClaw: msg=${message.id} agent=${agentId} session=${ctxPayload.SessionKey}`);
   await runPrepared({
     channel: "xalgo_voice",
     accountId: ctx.accountId,
@@ -395,16 +457,22 @@ async function dispatchGatewayInboundMessage(ctx: {
       ctx: ctxPayload,
       cfg: ctx.cfg,
       dispatcherOptions: {
-        ...replyPipeline,
+        onReplyStart: () => {
+          log.info(`OpenClaw reply started: msg=${message.id}`);
+        },
         deliver: async (payload: any) => {
           const text = payload && typeof payload === "object" && "text" in payload ? String(payload.text ?? "") : "";
           if (!text.trim()) return;
+          log.info(`OpenClaw reply deliver: msg=${message.id} textLength=${text.length}`);
+          sendReply(text, message.id, message.conversationId, {
+            sessionId: message.sessionId,
+            agentBindingId: message.agentBindingId,
+          });
         },
         onError: (error: unknown) => {
           throw error instanceof Error ? error : new Error(String(error));
         },
       },
-      replyOptions: { onModelSelected },
     }),
   });
 }

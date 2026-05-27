@@ -42,7 +42,7 @@ export class DeliveryTracker {
       tracked.playedUntil = payload.played_until;
     }
 
-    log.debug(`Delivery ack: ${payload.message_id} → ${payload.status}`);
+    log.info(`Delivery ack: ${payload.message_id} -> ${payload.status}`);
     this.statusCallback?.(payload.message_id, tracked.status);
   }
 

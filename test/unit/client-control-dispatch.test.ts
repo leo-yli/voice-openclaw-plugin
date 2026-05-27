@@ -51,4 +51,47 @@ describe("XvcClient dispatch: control_event", () => {
     client.disableReconnect();
     expect((client as any).reconnectDisabled).toBe(true);
   });
+
+  it("disconnect is terminal and close does not schedule a reconnect", () => {
+    const cfg = resolveConfig({ token: "t" });
+    const client = new XvcClient(
+      cfg,
+      { onEvent: () => {}, onStatusChange: () => {} },
+      makeStore()
+    );
+    const close = vi.fn();
+    const reconnectSchedule = vi.fn();
+    (client as any).status = "connected";
+    (client as any).ws = { close };
+    (client as any).reconnect.schedule = reconnectSchedule;
+
+    client.disconnect();
+    (client as any).handleClose(1000, "client disconnect");
+
+    expect((client as any).reconnectDisabled).toBe(true);
+    expect(close).toHaveBeenCalledWith(1000, "client disconnect");
+    expect(reconnectSchedule).not.toHaveBeenCalled();
+  });
+
+  it("responds to server ping with pong without dispatching it as inbound business event", () => {
+    const cfg = resolveConfig({ token: "t" });
+    const onEvent = vi.fn();
+    const onTransportActivity = vi.fn();
+    const client = new XvcClient(
+      cfg,
+      { onEvent, onStatusChange: () => {}, onTransportActivity },
+      makeStore()
+    );
+    const send = vi.fn();
+    (client as any).ws = { readyState: 1, send };
+
+    (client as any).handleMessage(JSON.stringify(createEvent("ping", { ts: 123 })));
+
+    expect(onEvent).not.toHaveBeenCalled();
+    expect(onTransportActivity).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledOnce();
+    const sent = JSON.parse(send.mock.calls[0][0]);
+    expect(sent.type).toBe("pong");
+    expect(sent.payload.ts).toBe(123);
+  });
 });

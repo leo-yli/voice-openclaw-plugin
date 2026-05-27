@@ -66,7 +66,10 @@ export interface ResumePayload {
 
 export interface InboundMessagePayload {
   message_id: string;
+  session_id?: string;
+  agent_binding_id?: string;
   chat_id: string;
+  conversation_id?: string;
   chat_type: "direct" | "room";
   sender: { id: string; name: string };
   text: string;
@@ -82,9 +85,13 @@ export interface InboundMessagePayload {
 
 export interface OutboundMessagePayload {
   message_id: string;
+  session_id?: string;
+  agent_binding_id?: string;
   chat_id: string;
   reply_to: string;
   text: string;
+  risk_state?: "R0" | "R1" | "R2" | "R3";
+  is_final?: boolean;
   metadata: {
     output_type: "voice_preferred" | "text_preferred" | "both";
     priority: "normal" | "urgent";
@@ -95,9 +102,12 @@ export interface OutboundMessagePayload {
 
 export interface OutboundDeltaPayload {
   message_id: string;
+  session_id?: string;
+  agent_binding_id?: string;
   chat_id: string;
   delta_seq: number;
   text_delta: string;
+  risk_state?: "R0" | "R1" | "R2" | "R3";
   span_id: string;
   is_final: boolean;
 }

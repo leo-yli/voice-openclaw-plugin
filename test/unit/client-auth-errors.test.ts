@@ -57,4 +57,35 @@ describe("XvcClient auth_failed reasons", () => {
     expect(evt.type).toBe("binding_revoked");
     expect(evt.payload.reason).toBe("suspicious_activity");
   });
+
+  it("resume protocol_error falls back to a fresh connect instead of disabling reconnect", () => {
+    const { store } = makeStore();
+    const onStatusChange = vi.fn();
+    const onControlEvent = vi.fn();
+    const client = new XvcClient(
+      resolveConfig({ token: "t" }),
+      { onEvent: () => {}, onStatusChange, onControlEvent },
+      store
+    );
+    const close = vi.fn();
+    (client as any).status = "connected";
+    (client as any).ws = { close };
+    (client as any).reconnect.recordConnectionId("conn_old");
+    (client as any).reconnect.recordEventId("evt_old");
+    (client as any).scheduleReconnect = vi.fn();
+
+    (client as any).handleErrorEvent({
+      code: "AUTH_FAILED",
+      message: "first frame must be connect",
+      reason: "protocol_error",
+    });
+
+    expect(onStatusChange).toHaveBeenCalledWith("disconnected");
+    expect((client as any).reconnectDisabled).toBe(false);
+    expect((client as any).reconnect.connectionId).toBeNull();
+    expect((client as any).reconnect.lastEventId).toBeNull();
+    expect(close).toHaveBeenCalledWith(1000, "retry fresh connect");
+    expect((client as any).scheduleReconnect).toHaveBeenCalledOnce();
+    expect(onControlEvent).not.toHaveBeenCalled();
+  });
 });

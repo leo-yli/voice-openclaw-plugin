@@ -6,6 +6,8 @@ const log = createLogger("streaming");
 
 export interface StreamSession {
   messageId: string;
+  sessionId?: string;
+  agentBindingId?: string;
   chatId: string;
   spanId: string;
   deltaSeq: number;
@@ -15,10 +17,16 @@ export interface StreamSession {
 export class StreamingManager {
   private sessions = new Map<string, StreamSession>();
 
-  startStream(messageId: string, chatId: string): StreamSession {
+  startStream(
+    messageId: string,
+    chatId: string,
+    options: { sessionId?: string; agentBindingId?: string } = {},
+  ): StreamSession {
     const spanId = `span_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const session: StreamSession = {
       messageId,
+      ...(options.sessionId ? { sessionId: options.sessionId } : {}),
+      ...(options.agentBindingId ? { agentBindingId: options.agentBindingId } : {}),
       chatId,
       spanId,
       deltaSeq: 0,
@@ -41,6 +49,8 @@ export class StreamingManager {
 
     return formatOutboundDelta({
       messageId: session.messageId,
+      sessionId: session.sessionId,
+      agentBindingId: session.agentBindingId,
       chatId: session.chatId,
       deltaSeq: session.deltaSeq,
       textDelta,
@@ -59,6 +69,8 @@ export class StreamingManager {
     session.deltaSeq++;
     const finalEvent = formatOutboundDelta({
       messageId: session.messageId,
+      sessionId: session.sessionId,
+      agentBindingId: session.agentBindingId,
       chatId: session.chatId,
       deltaSeq: session.deltaSeq,
       textDelta: "",
