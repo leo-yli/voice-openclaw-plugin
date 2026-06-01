@@ -28,7 +28,8 @@
     "scripts",
     "endpoints.json",
     "openclaw.plugin.json",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "openclaw": {
     "extensions": ["./dist/index.js"],
