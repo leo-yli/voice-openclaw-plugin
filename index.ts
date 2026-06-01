@@ -30,7 +30,7 @@ const plugin = {
   id: "xalgo_voice",
   name: "Xalgo Voice",
   description:
-    "Voice channel plugin that connects Xalgo glasses and Pupa voice cloud to OpenClaw agents.",
+    "通过 Xalgo 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
   configSchema: {
     type: "object" as const,
     additionalProperties: true,
@@ -42,9 +42,9 @@ const plugin = {
         meta: {
           id: "xalgo_voice",
           label: "Xalgo Voice",
-          selectionLabel: "Xalgo Voice (语音)",
+          selectionLabel: "Xalgo Voice（Xalgo 眼镜语音接入 OpenClaw）",
           docsPath: "/channels/xalgo-voice",
-          blurb: "Talk to your OpenClaw agents through Xalgo voice devices.",
+          blurb: "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
         },
         capabilities: {
           chatTypes: ["direct"],

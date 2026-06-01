@@ -2,7 +2,7 @@
   "name": "@xalgo/voice-openclaw-plugin",
   "version": "2026.5.16",
   "type": "module",
-  "description": "Xalgo Voice Channel plugin for OpenClaw.",
+  "description": "通过 Xalgo 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -35,7 +35,8 @@
     "channel": {
       "id": "xalgo_voice",
       "label": "Xalgo Voice",
-      "blurb": "Talk to your OpenClaw agents through Xalgo voice devices."
+      "selectionLabel": "Xalgo Voice（Xalgo 眼镜语音接入 OpenClaw）",
+      "blurb": "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。"
     },
     "install": {
       "npmSpec": "@xalgo/voice-openclaw-plugin",
