@@ -66,6 +66,27 @@ describe("protocol", () => {
     expect((event!.payload as any).session_id).toBe("voice_session_test");
   });
 
+  it("parses voice.user_turn event", () => {
+    const raw = JSON.stringify({
+      event_id: "evt_turn_001",
+      type: "voice.user_turn",
+      created_at: 1718000000000,
+      idempotency_key: "idem_turn_001",
+      payload: {
+        session_id: "voice_session_test",
+        agent_binding_id: "agent_binding_test",
+        utterance_id: "utt_001",
+        user_text: "测试一下语音路由",
+        metadata: { input_type: "voice" },
+      },
+    });
+
+    const event = parseEvent(raw);
+    expect(event).not.toBeNull();
+    expect(event!.type).toBe("voice.user_turn");
+    expect((event!.payload as any).utterance_id).toBe("utt_001");
+  });
+
   it("rejects event without event_id", () => {
     const invalid = { type: "ping", created_at: 123, payload: {} } as any;
     expect(isValidEvent(invalid)).toBe(false);

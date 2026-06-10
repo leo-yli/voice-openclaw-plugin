@@ -1,4 +1,4 @@
-import type { XvcEvent, InboundMessagePayload } from "./protocol.js";
+import type { XvcEvent, InboundMessagePayload, VoiceUserTurnPayload } from "./protocol.js";
 
 export interface InboundMessage {
   id: string;
@@ -11,10 +11,10 @@ export interface InboundMessage {
   conversationType: "direct" | "group";
   timestamp: number;
   replyToId?: string;
-  raw: InboundMessagePayload;
+  raw: InboundMessagePayload | VoiceUserTurnPayload;
 }
 
-type InboundPayloadRecord = InboundMessagePayload & Record<string, unknown>;
+type InboundPayloadRecord = Partial<InboundMessagePayload & VoiceUserTurnPayload> & Record<string, unknown>;
 
 function readString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -29,6 +29,8 @@ function readRecord(value: unknown): Record<string, unknown> {
 function readInboundText(payload: InboundPayloadRecord): string {
   const directKeys = [
     "text",
+    "user_text",
+    "userText",
     "transcript",
     "asr_text",
     "asrText",
@@ -71,7 +73,7 @@ function readFirstString(...values: unknown[]): string {
   return "";
 }
 
-export function describeInboundPayloadShape(event: XvcEvent<InboundMessagePayload>): string {
+export function describeInboundPayloadShape(event: XvcEvent<InboundMessagePayload | VoiceUserTurnPayload>): string {
   const payload = event.payload as InboundPayloadRecord;
   const keys = Object.keys(payload).sort();
   const stringFields = keys
@@ -93,7 +95,7 @@ export function describeInboundPayloadShape(event: XvcEvent<InboundMessagePayloa
   ].join(" ");
 }
 
-export function parseInboundMessage(event: XvcEvent<InboundMessagePayload>): InboundMessage | null {
+export function parseInboundMessage(event: XvcEvent<InboundMessagePayload | VoiceUserTurnPayload>): InboundMessage | null {
   const payload = event.payload as InboundPayloadRecord;
   const metadata = readRecord(payload.metadata);
   const text = readInboundText(payload);
@@ -109,21 +111,26 @@ export function parseInboundMessage(event: XvcEvent<InboundMessagePayload>): Inb
     metadata.agent_binding_id,
     metadata.agentBindingId,
   );
-  const conversationId = readFirstString(payload.chat_id, payload.conversation_id, payload.conversationId, sessionId);
+  const messageId = readFirstString(payload.message_id, payload.messageId, payload.utterance_id, payload.utteranceId, event.event_id);
+  const conversationId = readFirstString(payload.chat_id, payload.conversation_id, payload.conversationId, sessionId, agentBindingId, messageId);
+  const sender = readRecord(payload.sender);
+  const senderId = readFirstString(sender.id, payload.user_id, payload.userId, payload.sender_id, payload.senderId, conversationId.split(":").pop(), "voice_user");
+  const senderName = readFirstString(sender.name, payload.user_name, payload.userName, "User");
+  const chatType = readFirstString(payload.chat_type, payload.chatType, payload.conversation_type, payload.conversationType);
 
   return {
-    id: payload.message_id,
+    id: messageId,
     ...(sessionId ? { sessionId } : {}),
     ...(agentBindingId ? { agentBindingId } : {}),
     type: "text",
     text,
     sender: {
-      id: payload.sender.id,
-      name: payload.sender.name,
+      id: senderId,
+      name: senderName,
     },
     conversationId,
-    conversationType: payload.chat_type === "room" ? "group" : "direct",
+    conversationType: chatType === "room" || chatType === "group" ? "group" : "direct",
     timestamp: event.created_at,
-    raw: payload,
+    raw: payload as InboundMessagePayload | VoiceUserTurnPayload,
   };
 }

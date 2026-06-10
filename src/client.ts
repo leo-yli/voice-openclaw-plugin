@@ -145,6 +145,7 @@ export class XvcClient {
         "streaming_reply",
         "confirmation",
         "background_notification",
+        "voice.user_turn",
         "voice_interrupt",
         "voice.interrupt",
         "voice.cancel_request",

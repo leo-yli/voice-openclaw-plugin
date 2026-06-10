@@ -10,6 +10,8 @@ describe("InterruptHandler", () => {
     idempotency_key: "idem_int_001",
     payload: {
       chat_id: "xalgo:user:u123",
+      session_id: "voice_session_test",
+      agent_binding_id: "agent_binding_test",
       duplex_session_id: "duplex_789",
       interrupted_message_id: "reply_001",
       text: "停，直接说下午的",
@@ -31,6 +33,9 @@ describe("InterruptHandler", () => {
     expect(onCancel).toHaveBeenCalledWith("reply_001");
     expect(result).not.toBeNull();
     expect(result!.text).toBe("停，直接说下午的");
+    expect(result!.sessionId).toBe("voice_session_test");
+    expect(result!.agentBindingId).toBe("agent_binding_test");
+    expect(result!.replyToId).toBe("reply_001");
     expect(result!.conversationId).toBe("xalgo:user:u123");
   });
 

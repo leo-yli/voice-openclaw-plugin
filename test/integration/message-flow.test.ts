@@ -165,6 +165,68 @@ describe("integration: message flow", () => {
     }
   });
 
+  it("routes PUPA voice.user_turn replies with session fields", async () => {
+    const config = {
+      channels: {
+        xalgo_voice: {
+          enabled: true,
+          token: "valid_token",
+          instanceId: "oc_test_instance",
+          boundAt: "2026-05-15T00:00:00Z",
+          boundUserId: "u_test",
+          serverUrl: server.getUrl(),
+          apiBaseUrl: "https://asr-test.jlpay.com",
+          streaming: false,
+          reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
+        },
+      },
+    };
+    const runtime = {
+      channel: {
+        session: {
+          recordInboundSession: async () => {},
+          resolveStorePath: () => "/tmp/openclaw-test-session",
+        },
+        turn: {
+          runPrepared: async ({ runDispatch }: any) => {
+            await runDispatch();
+          },
+        },
+        reply: {
+          finalizeInboundContext: (ctx: any) => ctx,
+          dispatchReplyWithBufferedBlockDispatcher: async ({ dispatcherOptions }: any) => {
+            await dispatcherOptions.deliver({ text: "收到语音回合" });
+          },
+        },
+      },
+    };
+    const abort = new AbortController();
+    const gateway = createGatewayAdapter();
+    const run = gateway.startAccount({
+      cfg: config,
+      account: config.channels.xalgo_voice,
+      accountId: "default",
+      abortSignal: abort.signal,
+      runtime,
+      setStatus: () => {},
+    });
+
+    try {
+      await new Promise((r) => setTimeout(r, 300));
+      server.sendVoiceUserTurn({ utterance_id: "utt_turn_001" });
+      await waitFor(() => server.getReceivedEvents().some((e) => e.type === "outbound_message" && (e.payload as any).text === "收到语音回合"));
+
+      const outbound = server.getReceivedEvents().find((e) => e.type === "outbound_message" && (e.payload as any).text === "收到语音回合");
+      expect(outbound).toBeDefined();
+      expect((outbound!.payload as any).session_id).toBe("voice_session_test");
+      expect((outbound!.payload as any).agent_binding_id).toBe("agent_binding_test");
+      expect((outbound!.payload as any).reply_to).toBe("utt_turn_001");
+    } finally {
+      abort.abort();
+      await run;
+    }
+  });
+
   it("cancels active gateway runtime work on voice.cancel_request", async () => {
     const config = {
       channels: {
@@ -234,6 +296,66 @@ describe("integration: message flow", () => {
         reason: "user_voice_cancel",
       }));
       expect(server.getReceivedEvents().some((e) => e.type === "outbound_message" && (e.payload as any).text === "这条旧任务结果不应该发出")).toBe(false);
+    } finally {
+      abort.abort();
+      await run;
+    }
+  });
+
+  it("acks voice.cancel_request with session fields even without active work", async () => {
+    const config = {
+      channels: {
+        xalgo_voice: {
+          enabled: true,
+          token: "valid_token",
+          instanceId: "oc_test_instance",
+          boundAt: "2026-05-15T00:00:00Z",
+          boundUserId: "u_test",
+          serverUrl: server.getUrl(),
+          apiBaseUrl: "https://asr-test.jlpay.com",
+          streaming: false,
+          reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
+        },
+      },
+    };
+    const runtime = {
+      channel: {
+        session: {
+          recordInboundSession: async () => {},
+          resolveStorePath: () => "/tmp/openclaw-test-session",
+        },
+        turn: {
+          runPrepared: async ({ runDispatch }: any) => {
+            await runDispatch();
+          },
+        },
+        reply: {
+          finalizeInboundContext: (ctx: any) => ctx,
+          dispatchReplyWithBufferedBlockDispatcher: async () => {},
+        },
+      },
+    };
+    const abort = new AbortController();
+    const gateway = createGatewayAdapter();
+    const run = gateway.startAccount({
+      cfg: config,
+      account: config.channels.xalgo_voice,
+      accountId: "default",
+      abortSignal: abort.signal,
+      runtime,
+      setStatus: () => {},
+    });
+
+    try {
+      await new Promise((r) => setTimeout(r, 300));
+      server.sendVoiceCancelRequest({ utterance_id: "utt_cancel_no_run" });
+      await waitFor(() => server.getReceivedEvents().some((e) => e.type === "outbound_message" && (e.payload as any).text === "已取消"));
+
+      const outbound = server.getReceivedEvents().find((e) => e.type === "outbound_message" && (e.payload as any).text === "已取消");
+      expect(outbound).toBeDefined();
+      expect((outbound!.payload as any).session_id).toBe("voice_session_test");
+      expect((outbound!.payload as any).agent_binding_id).toBe("agent_binding_test");
+      expect((outbound!.payload as any).reply_to).toBe("utt_cancel_no_run");
     } finally {
       abort.abort();
       await run;

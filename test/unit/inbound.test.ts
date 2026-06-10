@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseInboundMessage } from "../../src/inbound.js";
-import type { XvcEvent, InboundMessagePayload } from "../../src/protocol.js";
+import type { XvcEvent, InboundMessagePayload, VoiceUserTurnPayload } from "../../src/protocol.js";
 
 describe("inbound", () => {
   const makeEvent = (payload: InboundMessagePayload): XvcEvent<InboundMessagePayload> => ({
@@ -90,6 +90,31 @@ describe("inbound", () => {
     const result = parseInboundMessage(event);
     expect(result).not.toBeNull();
     expect(result!.text).toBe("从 result.text 来的语音文本");
+  });
+
+  it("converts PUPA voice.user_turn without legacy chat fields", () => {
+    const event: XvcEvent<VoiceUserTurnPayload> = {
+      event_id: "evt_turn_001",
+      type: "voice.user_turn",
+      created_at: 1718000000000,
+      idempotency_key: "idem_turn_001",
+      payload: {
+        session_id: "voice_session_test",
+        agent_binding_id: "agent_binding_test",
+        utterance_id: "utt_001",
+        user_text: "测试一下语音路由",
+        metadata: { input_type: "voice" },
+      },
+    };
+
+    const result = parseInboundMessage(event);
+
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe("utt_001");
+    expect(result!.sessionId).toBe("voice_session_test");
+    expect(result!.agentBindingId).toBe("agent_binding_test");
+    expect(result!.conversationId).toBe("voice_session_test");
+    expect(result!.text).toBe("测试一下语音路由");
   });
 
   it("returns null for empty text", () => {

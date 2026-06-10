@@ -10,6 +10,7 @@ export type XvcEventType =
   | "outbound_delta"
   | "confirmation_request"
   | "confirmation_response"
+  | "voice.user_turn"
   | "voice_interrupt"
   | "voice.interrupt"
   | "voice.cancel_request"
@@ -153,6 +154,27 @@ export interface VoiceInterruptPayload {
   metadata: {
     asr_confidence: number;
     barge_in_type: "semantic_stop" | "explicit_stop" | "new_intent";
+  };
+}
+
+export interface VoiceUserTurnPayload {
+  session_id?: string;
+  agent_binding_id?: string;
+  utterance_id?: string;
+  message_id?: string;
+  chat_id?: string;
+  conversation_id?: string;
+  user_id?: string;
+  user_text?: string;
+  text?: string;
+  transcript?: string;
+  turn_state?: string;
+  sender?: { id?: string; name?: string };
+  metadata?: {
+    input_type?: "voice" | "text";
+    language?: string;
+    asr_confidence?: number;
+    [key: string]: unknown;
   };
 }
 

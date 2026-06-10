@@ -1,4 +1,4 @@
-import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, VoiceCancelRequestPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
+import type { XvcEvent, InboundMessagePayload, VoiceUserTurnPayload, ConfirmationResponsePayload, VoiceInterruptPayload, VoiceCancelRequestPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
 import {
   missingXalgoBindingFields,
   readNonEmptyString,
@@ -168,7 +168,8 @@ export class XalgoVoiceChannel {
   private dispatchEvent(event: XvcEvent): void {
     switch (event.type) {
       case "inbound_message":
-        this.handleInbound(event as XvcEvent<InboundMessagePayload>);
+      case "voice.user_turn":
+        this.handleInbound(event as XvcEvent<InboundMessagePayload | VoiceUserTurnPayload>);
         break;
       case "confirmation_response":
         this.confirmation.resolve(event.payload as ConfirmationResponsePayload);
@@ -188,7 +189,7 @@ export class XalgoVoiceChannel {
     }
   }
 
-  private handleInbound(event: XvcEvent<InboundMessagePayload>): void {
+  private handleInbound(event: XvcEvent<InboundMessagePayload | VoiceUserTurnPayload>): void {
     const msg = parseInboundMessage(event);
     if (!msg) {
       log.warn(`Failed to parse inbound message, skipping: ${describeInboundPayloadShape(event)}`);
@@ -403,11 +404,11 @@ export function createGatewayAdapter() {
         });
 
         const targetMessage = run?.message;
-        const chatId = request.chatId ?? targetMessage?.conversationId;
-        if (chatId && targetMessage) {
-          adapter.sendReply("已取消", request.utteranceId ?? targetMessage.id, chatId, {
-            sessionId: request.sessionId ?? targetMessage.sessionId,
-            agentBindingId: request.agentBindingId ?? targetMessage.agentBindingId,
+        const chatId = request.chatId ?? targetMessage?.conversationId ?? request.sessionId ?? request.agentBindingId;
+        if (chatId) {
+          adapter.sendReply("已取消", request.utteranceId ?? targetMessage?.id ?? request.eventId, chatId, {
+            sessionId: request.sessionId ?? targetMessage?.sessionId,
+            agentBindingId: request.agentBindingId ?? targetMessage?.agentBindingId,
           });
         }
       };

@@ -37,7 +37,9 @@ export class InterruptHandler {
   handleInterrupt(event: XvcEvent<VoiceInterruptPayload>): InboundMessage | null {
     const { payload } = event;
     const interruptedMessageId = readString(payload.interrupted_message_id) || event.event_id;
-    const chatId = readString(payload.chat_id) || readString(payload.session_id) || "unknown";
+    const sessionId = readString(payload.session_id);
+    const agentBindingId = readString(payload.agent_binding_id);
+    const chatId = readString(payload.chat_id) || sessionId || agentBindingId || event.event_id;
     const text = readString(payload.text) || readString(payload.user_text);
 
     log.info(`Interrupt received: msg=${interruptedMessageId}, decision=${payload.decision}`);
@@ -57,12 +59,15 @@ export class InterruptHandler {
 
     const followUp: InboundMessage = {
       id: `interrupt_${event.event_id}`,
+      ...(sessionId ? { sessionId } : {}),
+      ...(agentBindingId ? { agentBindingId } : {}),
       type: "text",
       text,
       sender: { id: chatId.split(":").pop() ?? "unknown", name: "User" },
       conversationId: chatId,
       conversationType: "direct",
       timestamp: event.created_at,
+      replyToId: interruptedMessageId,
       raw: payload as any,
     };
 
