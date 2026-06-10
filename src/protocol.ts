@@ -11,6 +11,8 @@ export type XvcEventType =
   | "confirmation_request"
   | "confirmation_response"
   | "voice_interrupt"
+  | "voice.interrupt"
+  | "voice.cancel_request"
   | "delivery_ack"
   | "task_started"
   | "task_done"
@@ -132,9 +134,12 @@ export interface ConfirmationResponsePayload {
 }
 
 export interface VoiceInterruptPayload {
+  session_id?: string;
+  agent_binding_id?: string;
   chat_id: string;
   duplex_session_id: string;
   interrupted_message_id: string;
+  user_text?: string;
   text: string;
   decision: "STOP" | "STEER";
   played_until: {
@@ -148,6 +153,22 @@ export interface VoiceInterruptPayload {
   metadata: {
     asr_confidence: number;
     barge_in_type: "semantic_stop" | "explicit_stop" | "new_intent";
+  };
+}
+
+export interface VoiceCancelRequestPayload {
+  session_id?: string;
+  agent_binding_id?: string;
+  utterance_id?: string;
+  chat_id?: string;
+  conversation_id?: string;
+  reason?: "user_voice_cancel" | string;
+  user_text?: string;
+  text?: string;
+  turn_state?: "CANCEL" | string;
+  metadata?: {
+    input_type?: "voice" | "text";
+    [key: string]: unknown;
   };
 }
 

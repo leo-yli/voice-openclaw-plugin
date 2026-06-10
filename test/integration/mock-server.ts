@@ -83,6 +83,20 @@ export class MockXalgoServer {
     }));
   }
 
+  sendVoiceCancelRequest(overrides: Record<string, unknown> = {}): void {
+    this.sendToAll(createEvent("voice.cancel_request", {
+      session_id: "voice_session_test",
+      agent_binding_id: "agent_binding_test",
+      utterance_id: `utt_${Date.now()}`,
+      reason: "user_voice_cancel",
+      user_text: "Never mind, cancel that task.",
+      text: "Never mind, cancel that task.",
+      turn_state: "CANCEL",
+      metadata: { input_type: "voice" },
+      ...overrides,
+    }));
+  }
+
   pushBindingRevoked(
     bindingId: string = "b_test",
     reason: BindingRevokedPayload["reason"] = "user_unbound"

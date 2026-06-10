@@ -14,6 +14,13 @@ export interface StreamSession {
   totalText: string;
 }
 
+export interface StreamCancelSelector {
+  messageId?: string;
+  sessionId?: string;
+  agentBindingId?: string;
+  chatId?: string;
+}
+
 export class StreamingManager {
   private sessions = new Map<string, StreamSession>();
 
@@ -88,6 +95,26 @@ export class StreamingManager {
       this.sessions.delete(messageId);
       log.debug(`Stream cancelled: ${messageId}`);
     }
+  }
+
+  cancelStreams(selector: StreamCancelSelector = {}): StreamSession[] {
+    const cancelled: StreamSession[] = [];
+
+    for (const session of Array.from(this.sessions.values())) {
+      const matched =
+        (selector.messageId && session.messageId === selector.messageId) ||
+        (selector.sessionId && session.sessionId === selector.sessionId) ||
+        (selector.agentBindingId && session.agentBindingId === selector.agentBindingId) ||
+        (selector.chatId && session.chatId === selector.chatId) ||
+        (!selector.messageId && !selector.sessionId && !selector.agentBindingId && !selector.chatId);
+
+      if (!matched) continue;
+      this.sessions.delete(session.messageId);
+      cancelled.push(session);
+      log.debug(`Stream cancelled: ${session.messageId}`);
+    }
+
+    return cancelled;
   }
 
   getSession(messageId: string): StreamSession | undefined {

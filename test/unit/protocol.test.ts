@@ -43,6 +43,29 @@ describe("protocol", () => {
     expect(isValidEvent(valid)).toBe(true);
   });
 
+  it("parses voice.cancel_request event", () => {
+    const raw = JSON.stringify({
+      event_id: "evt_cancel_001",
+      type: "voice.cancel_request",
+      created_at: 1718000000000,
+      idempotency_key: "idem_cancel_001",
+      payload: {
+        session_id: "voice_session_test",
+        agent_binding_id: "agent_binding_test",
+        utterance_id: "utt_001",
+        reason: "user_voice_cancel",
+        user_text: "Never mind, cancel that task.",
+        turn_state: "CANCEL",
+        metadata: { input_type: "voice" },
+      },
+    });
+
+    const event = parseEvent(raw);
+    expect(event).not.toBeNull();
+    expect(event!.type).toBe("voice.cancel_request");
+    expect((event!.payload as any).session_id).toBe("voice_session_test");
+  });
+
   it("rejects event without event_id", () => {
     const invalid = { type: "ping", created_at: 123, payload: {} } as any;
     expect(isValidEvent(invalid)).toBe(false);

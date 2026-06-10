@@ -1,5 +1,5 @@
 import { createLogger } from "./logger.js";
-import type { XvcEvent, VoiceInterruptPayload } from "./protocol.js";
+import type { XvcEvent, VoiceCancelRequestPayload, VoiceInterruptPayload } from "./protocol.js";
 import type { InboundMessage } from "./inbound.js";
 
 const log = createLogger("interrupt");
@@ -9,6 +9,21 @@ export interface PlaybackLedger {
   deliveredText: string;
   notDelivered: boolean;
   playedUntil: { span_id: string; chunk_seq: number };
+}
+
+export interface VoiceCancelRequest {
+  eventId: string;
+  sessionId?: string;
+  agentBindingId?: string;
+  utteranceId?: string;
+  chatId?: string;
+  reason?: string;
+  text: string;
+  raw: VoiceCancelRequestPayload;
+}
+
+function readString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
 
 export class InterruptHandler {
@@ -21,28 +36,31 @@ export class InterruptHandler {
 
   handleInterrupt(event: XvcEvent<VoiceInterruptPayload>): InboundMessage | null {
     const { payload } = event;
+    const interruptedMessageId = readString(payload.interrupted_message_id) || event.event_id;
+    const chatId = readString(payload.chat_id) || readString(payload.session_id) || "unknown";
+    const text = readString(payload.text) || readString(payload.user_text);
 
-    log.info(`Interrupt received: msg=${payload.interrupted_message_id}, decision=${payload.decision}`);
+    log.info(`Interrupt received: msg=${interruptedMessageId}, decision=${payload.decision}`);
 
-    this.ledgers.set(payload.interrupted_message_id, {
-      messageId: payload.interrupted_message_id,
-      deliveredText: payload.ledger_summary.delivered_text,
-      notDelivered: payload.ledger_summary.not_delivered,
-      playedUntil: payload.played_until,
+    this.ledgers.set(interruptedMessageId, {
+      messageId: interruptedMessageId,
+      deliveredText: payload.ledger_summary?.delivered_text ?? "",
+      notDelivered: payload.ledger_summary?.not_delivered ?? true,
+      playedUntil: payload.played_until ?? { span_id: "", chunk_seq: 0 },
     });
 
-    this.cancelCallback?.(payload.interrupted_message_id);
+    this.cancelCallback?.(interruptedMessageId);
 
-    if (!payload.text || payload.text.trim() === "") {
+    if (!text) {
       return null;
     }
 
     const followUp: InboundMessage = {
       id: `interrupt_${event.event_id}`,
       type: "text",
-      text: payload.text,
-      sender: { id: payload.chat_id.split(":").pop() ?? "unknown", name: "User" },
-      conversationId: payload.chat_id,
+      text,
+      sender: { id: chatId.split(":").pop() ?? "unknown", name: "User" },
+      conversationId: chatId,
       conversationType: "direct",
       timestamp: event.created_at,
       raw: payload as any,
@@ -58,4 +76,20 @@ export class InterruptHandler {
   clearLedger(messageId: string): void {
     this.ledgers.delete(messageId);
   }
+}
+
+export function parseVoiceCancelRequest(event: XvcEvent<VoiceCancelRequestPayload>): VoiceCancelRequest {
+  const payload = event.payload;
+  return {
+    eventId: event.event_id,
+    ...(readString(payload.session_id) ? { sessionId: readString(payload.session_id) } : {}),
+    ...(readString(payload.agent_binding_id) ? { agentBindingId: readString(payload.agent_binding_id) } : {}),
+    ...(readString(payload.utterance_id) ? { utteranceId: readString(payload.utterance_id) } : {}),
+    ...(readString(payload.chat_id) || readString(payload.conversation_id)
+      ? { chatId: readString(payload.chat_id) || readString(payload.conversation_id) }
+      : {}),
+    ...(readString(payload.reason) ? { reason: readString(payload.reason) } : {}),
+    text: readString(payload.user_text) || readString(payload.text),
+    raw: payload,
+  };
 }

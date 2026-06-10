@@ -146,6 +146,8 @@ export class XvcClient {
         "confirmation",
         "background_notification",
         "voice_interrupt",
+        "voice.interrupt",
+        "voice.cancel_request",
         "delivery_ack",
       ],
     };

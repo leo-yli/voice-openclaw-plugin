@@ -1,4 +1,4 @@
-import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
+import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, VoiceCancelRequestPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
 import {
   missingXalgoBindingFields,
   readNonEmptyString,
@@ -10,7 +10,7 @@ import { describeInboundPayloadShape, parseInboundMessage, type InboundMessage }
 import { formatOutboundMessage } from "./outbound.js";
 import { StreamingManager } from "./streaming.js";
 import { ConfirmationManager } from "./confirmation.js";
-import { InterruptHandler } from "./interrupt.js";
+import { InterruptHandler, parseVoiceCancelRequest, type VoiceCancelRequest } from "./interrupt.js";
 import { DeliveryTracker } from "./delivery-ack.js";
 import { createLogger } from "./logger.js";
 import type { BindingStore } from "./binding-store.js";
@@ -28,6 +28,12 @@ interface ReplyRouteContext {
 }
 
 type GatewayReplySender = (text: string, replyTo: string, chatId: string, route?: ReplyRouteContext) => void;
+
+interface GatewayActiveRun {
+  sessionKey: string;
+  message: InboundMessage;
+  abortController: AbortController;
+}
 
 const log = createLogger("channel");
 
@@ -48,6 +54,9 @@ export interface ChannelCallbacks {
   handleMessage: (msg: InboundMessage) => void;
   handleStatus: (status: { status: string }) => void;
   handleTransportActivity?: () => void;
+  handleEvent?: (event: XvcEvent) => void;
+  handleInterrupt?: (event: XvcEvent<VoiceInterruptPayload>) => void;
+  handleCancelRequest?: (request: VoiceCancelRequest, event: XvcEvent<VoiceCancelRequestPayload>) => void;
 }
 
 export class XalgoVoiceChannel {
@@ -165,7 +174,11 @@ export class XalgoVoiceChannel {
         this.confirmation.resolve(event.payload as ConfirmationResponsePayload);
         break;
       case "voice_interrupt":
+      case "voice.interrupt":
         this.handleVoiceInterrupt(event as XvcEvent<VoiceInterruptPayload>);
+        break;
+      case "voice.cancel_request":
+        this.handleVoiceCancelRequest(event as XvcEvent<VoiceCancelRequestPayload>);
         break;
       case "delivery_ack":
         this.delivery.handleAck(event.payload as DeliveryAckPayload);
@@ -186,10 +199,24 @@ export class XalgoVoiceChannel {
   }
 
   private handleVoiceInterrupt(event: XvcEvent<VoiceInterruptPayload>): void {
+    this.callbacks?.handleEvent?.(event);
+    this.callbacks?.handleInterrupt?.(event);
     const followUp = this.interrupt.handleInterrupt(event);
     if (followUp) {
       this.callbacks?.handleMessage(followUp);
     }
+  }
+
+  private handleVoiceCancelRequest(event: XvcEvent<VoiceCancelRequestPayload>): void {
+    this.callbacks?.handleEvent?.(event);
+    const request = parseVoiceCancelRequest(event);
+    const cancelled = this.streaming.cancelStreams({
+      sessionId: request.sessionId,
+      agentBindingId: request.agentBindingId,
+      chatId: request.chatId,
+    });
+    log.info(`Voice cancel_request received: session=${request.sessionId ?? "(none)"} agentBinding=${request.agentBindingId ?? "(none)"} cancelledStreams=${cancelled.length}`);
+    this.callbacks?.handleCancelRequest?.(request, event);
   }
 
   private handleStatusChange(status: ConnectionStatus): void {
@@ -228,12 +255,14 @@ export function createInboundAdapter() {
   let channel: XalgoVoiceChannel | null = null;
 
   return {
-    async start({ config, account, handleMessage, handleStatus, handleTransportActivity, readConfig, writeConfig }: {
+    async start({ config, account, handleMessage, handleEvent, handleStatus, handleInterrupt, handleCancelRequest, handleTransportActivity, readConfig, writeConfig }: {
       config: any;
       account?: any;
       handleMessage: (msg: InboundMessage) => void;
       handleEvent?: (event: any) => void;
       handleStatus: (status: { status: string }) => void;
+      handleInterrupt?: (event: any) => void;
+      handleCancelRequest?: (request: VoiceCancelRequest, event: any) => void;
       handleTransportActivity?: () => void;
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
@@ -256,7 +285,7 @@ export function createInboundAdapter() {
 
       log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
       channel = new XalgoVoiceChannel(xalgoConfig as Partial<XalgoVoiceConfig> & { token: string }, store);
-      await channel.start({ handleMessage, handleStatus, handleTransportActivity });
+      await channel.start({ handleMessage, handleStatus, handleTransportActivity, handleEvent, handleInterrupt, handleCancelRequest });
     },
 
     async stop() {
@@ -292,24 +321,67 @@ export function createGatewayAdapter() {
       const statusSink: GatewayStatusSink = (patch) =>
         ctx.setStatus({ accountId: ctx.accountId, ...patch });
       const adapter = createInboundAdapter();
-      const activeDispatches = new Set<string>();
+      const activeRuns = new Map<string, GatewayActiveRun>();
+      const activeRunsBySessionId = new Map<string, GatewayActiveRun>();
+      const activeRunsByAgentBindingId = new Map<string, GatewayActiveRun>();
       const pendingMessages = new Map<string, InboundMessage>();
       const sessionKeyFor = (message: InboundMessage) => `${ctx.accountId}:${message.conversationId}`;
+      const indexActiveRun = (run: GatewayActiveRun) => {
+        activeRuns.set(run.sessionKey, run);
+        if (run.message.sessionId) activeRunsBySessionId.set(run.message.sessionId, run);
+        if (run.message.agentBindingId) activeRunsByAgentBindingId.set(run.message.agentBindingId, run);
+      };
+      const removeActiveRun = (run: GatewayActiveRun) => {
+        if (activeRuns.get(run.sessionKey) === run) activeRuns.delete(run.sessionKey);
+        if (run.message.sessionId && activeRunsBySessionId.get(run.message.sessionId) === run) {
+          activeRunsBySessionId.delete(run.message.sessionId);
+        }
+        if (run.message.agentBindingId && activeRunsByAgentBindingId.get(run.message.agentBindingId) === run) {
+          activeRunsByAgentBindingId.delete(run.message.agentBindingId);
+        }
+      };
+      const abortActiveRun = (run: GatewayActiveRun, reason: string) => {
+        if (!run.abortController.signal.aborted) run.abortController.abort(reason);
+        pendingMessages.delete(run.sessionKey);
+        removeActiveRun(run);
+        log.info(`OpenClaw dispatch aborted: msg=${run.message.id} session=${run.sessionKey} reason=${reason}`);
+      };
+      const findActiveRun = (selector: { sessionId?: string; agentBindingId?: string; chatId?: string }): GatewayActiveRun | null => {
+        if (selector.sessionId) {
+          const bySession = activeRunsBySessionId.get(selector.sessionId);
+          if (bySession) return bySession;
+        }
+        if (selector.agentBindingId) {
+          const byBinding = activeRunsByAgentBindingId.get(selector.agentBindingId);
+          if (byBinding) return byBinding;
+        }
+        if (selector.chatId) {
+          const byChat = activeRuns.get(`${ctx.accountId}:${selector.chatId}`);
+          if (byChat) return byChat;
+        }
+        return null;
+      };
       const dispatchMessage = async (message: InboundMessage): Promise<void> => {
         const sessionKey = sessionKeyFor(message);
-        if (activeDispatches.has(sessionKey)) {
+        if (activeRuns.has(sessionKey)) {
           pendingMessages.set(sessionKey, message);
           log.info(`OpenClaw dispatch already active, queued latest inbound: msg=${message.id} session=${sessionKey}`);
           return;
         }
 
-        activeDispatches.add(sessionKey);
+        const abortController = new AbortController();
+        const run: GatewayActiveRun = { sessionKey, message, abortController };
+        indexActiveRun(run);
         try {
           await dispatchGatewayInboundMessage(ctx, message, (text, replyTo, chatId, route) => {
+            if (abortController.signal.aborted) {
+              log.info(`Drop reply from aborted OpenClaw dispatch: msg=${message.id}`);
+              return;
+            }
             adapter.sendReply(text, replyTo, chatId, route);
-          });
+          }, { abortSignal: abortController.signal });
         } finally {
-          activeDispatches.delete(sessionKey);
+          removeActiveRun(run);
           const pending = pendingMessages.get(sessionKey);
           if (pending) {
             pendingMessages.delete(sessionKey);
@@ -317,9 +389,43 @@ export function createGatewayAdapter() {
           }
         }
       };
+      const handleCancelRequest = (request: VoiceCancelRequest) => {
+        statusSink({ lastEventAt: Date.now(), lastTransportActivityAt: Date.now() });
+        const run = findActiveRun(request);
+        if (run) {
+          abortActiveRun(run, request.reason ?? "voice.cancel_request");
+        }
+
+        invokeGatewayRuntimeCancel(ctx, request, run).catch((err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          ctx.log?.error?.(`[${ctx.accountId}] runtime cancel failed: ${msg}`);
+          statusSink({ lastError: msg });
+        });
+
+        const targetMessage = run?.message;
+        const chatId = request.chatId ?? targetMessage?.conversationId;
+        if (chatId && targetMessage) {
+          adapter.sendReply("已取消", request.utteranceId ?? targetMessage.id, chatId, {
+            sessionId: request.sessionId ?? targetMessage.sessionId,
+            agentBindingId: request.agentBindingId ?? targetMessage.agentBindingId,
+          });
+        }
+      };
+      const handleInterrupt = (event: XvcEvent<VoiceInterruptPayload>) => {
+        const payload = event.payload;
+        const run = findActiveRun({
+          sessionId: payload.session_id ?? payload.duplex_session_id,
+          agentBindingId: payload.agent_binding_id,
+          chatId: payload.chat_id,
+        });
+        if (run) abortActiveRun(run, "voice.interrupt");
+      };
       const stopOnAbort = async () => {
         pendingMessages.clear();
-        activeDispatches.clear();
+        for (const run of Array.from(activeRuns.values())) abortActiveRun(run, "gateway.abort");
+        activeRuns.clear();
+        activeRunsBySessionId.clear();
+        activeRunsByAgentBindingId.clear();
         await adapter.stop();
         statusSink({ connected: false });
       };
@@ -339,6 +445,8 @@ export function createGatewayAdapter() {
         handleStatus: (status) => {
           applyGatewayConnectionStatus(statusSink, status.status);
         },
+        handleInterrupt,
+        handleCancelRequest,
         handleTransportActivity: () => {
           statusSink({ lastTransportActivityAt: Date.now() });
         },
@@ -391,7 +499,7 @@ async function dispatchGatewayInboundMessage(ctx: {
   accountId: string;
   runtime?: any;
   channelRuntime?: any;
-}, message: InboundMessage, sendReply: GatewayReplySender): Promise<void> {
+}, message: InboundMessage, sendReply: GatewayReplySender, options: { abortSignal?: AbortSignal } = {}): Promise<void> {
   const runtime = ctx.channelRuntime ?? ctx.runtime;
   const channelRuntime = runtime?.channel ?? runtime;
   const reply = channelRuntime?.reply;
@@ -453,14 +561,24 @@ async function dispatchGatewayInboundMessage(ctx: {
     storePath,
     ctxPayload,
     recordInboundSession,
+    abortSignal: options.abortSignal,
+    signal: options.abortSignal,
     runDispatch: async () => await dispatchReply({
       ctx: ctxPayload,
       cfg: ctx.cfg,
+      abortSignal: options.abortSignal,
+      signal: options.abortSignal,
       dispatcherOptions: {
+        abortSignal: options.abortSignal,
+        signal: options.abortSignal,
         onReplyStart: () => {
           log.info(`OpenClaw reply started: msg=${message.id}`);
         },
         deliver: async (payload: any) => {
+          if (options.abortSignal?.aborted) {
+            log.info(`Drop dispatcher delivery after cancel: msg=${message.id}`);
+            return;
+          }
           const text = payload && typeof payload === "object" && "text" in payload ? String(payload.text ?? "") : "";
           if (!text.trim()) return;
           log.info(`OpenClaw reply deliver: msg=${message.id} textLength=${text.length}`);
@@ -475,6 +593,54 @@ async function dispatchGatewayInboundMessage(ctx: {
       },
     }),
   });
+}
+
+async function invokeGatewayRuntimeCancel(ctx: {
+  cfg: any;
+  account: any;
+  accountId: string;
+  runtime?: any;
+  channelRuntime?: any;
+}, request: VoiceCancelRequest, run: GatewayActiveRun | null): Promise<void> {
+  const runtime = ctx.channelRuntime ?? ctx.runtime;
+  const channelRuntime = runtime?.channel ?? runtime;
+  const turn = channelRuntime?.turn;
+  const tasks = channelRuntime?.tasks ?? channelRuntime?.task;
+  const payload = {
+    channel: "xalgo_voice",
+    accountId: ctx.accountId,
+    sessionId: request.sessionId,
+    agentBindingId: request.agentBindingId,
+    utteranceId: request.utteranceId,
+    messageId: run?.message.id,
+    routeSessionKey: run?.sessionKey,
+    reason: request.reason ?? "user_voice_cancel",
+    text: request.text,
+    event: request.raw,
+    abortSignal: run?.abortController.signal,
+    signal: run?.abortController.signal,
+  };
+
+  const candidates = [
+    { owner: turn, fn: turn?.cancelRun },
+    { owner: turn, fn: turn?.cancel },
+    { owner: turn, fn: turn?.abortRun },
+    { owner: tasks, fn: tasks?.cancel },
+    { owner: tasks, fn: tasks?.cancelTask },
+    { owner: channelRuntime, fn: channelRuntime?.cancelRun },
+    { owner: channelRuntime, fn: channelRuntime?.cancelTask },
+    { owner: channelRuntime, fn: channelRuntime?.cancel },
+    { owner: runtime, fn: runtime?.cancelRun },
+    { owner: runtime, fn: runtime?.cancelTask },
+    { owner: runtime, fn: runtime?.cancel },
+  ].filter((candidate): candidate is { owner: any; fn: (arg: typeof payload) => unknown } => typeof candidate.fn === "function");
+
+  if (candidates.length === 0) {
+    log.warn("Runtime has no cancel API for voice.cancel_request; relying on local abort/drop guards");
+    return;
+  }
+
+  await Promise.resolve(candidates[0].fn.call(candidates[0].owner, payload));
 }
 
 export const outbound = {

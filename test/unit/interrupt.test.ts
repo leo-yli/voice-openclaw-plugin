@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { InterruptHandler } from "../../src/interrupt.js";
-import type { XvcEvent, VoiceInterruptPayload } from "../../src/protocol.js";
+import { InterruptHandler, parseVoiceCancelRequest } from "../../src/interrupt.js";
+import type { XvcEvent, VoiceCancelRequestPayload, VoiceInterruptPayload } from "../../src/protocol.js";
 
 describe("InterruptHandler", () => {
   const makeInterruptEvent = (overrides?: Partial<VoiceInterruptPayload>): XvcEvent<VoiceInterruptPayload> => ({
@@ -60,5 +60,30 @@ describe("InterruptHandler", () => {
     const handler = new InterruptHandler();
     const result = handler.handleInterrupt(makeInterruptEvent({ text: "" }));
     expect(result).toBeNull();
+  });
+
+  it("parses voice cancel_request payload", () => {
+    const event: XvcEvent<VoiceCancelRequestPayload> = {
+      event_id: "evt_cancel_001",
+      type: "voice.cancel_request",
+      created_at: Date.now(),
+      idempotency_key: "idem_cancel_001",
+      payload: {
+        session_id: "voice_session_test",
+        agent_binding_id: "agent_binding_test",
+        utterance_id: "utt_001",
+        reason: "user_voice_cancel",
+        user_text: "Never mind, cancel that task.",
+        turn_state: "CANCEL",
+        metadata: { input_type: "voice" },
+      },
+    };
+
+    const result = parseVoiceCancelRequest(event);
+
+    expect(result.sessionId).toBe("voice_session_test");
+    expect(result.agentBindingId).toBe("agent_binding_test");
+    expect(result.utteranceId).toBe("utt_001");
+    expect(result.text).toBe("Never mind, cancel that task.");
   });
 });
