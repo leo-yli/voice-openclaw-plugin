@@ -27,7 +27,7 @@ describe("XalgoVoiceChannel + control events", () => {
     const statusUpdates: string[] = [];
 
     const channel = new XalgoVoiceChannel(
-      { token: "t", apiBaseUrl: "https://api.example.com" } as any,
+      { token: "t", apiBaseUrl: "https://api.example.com/api/v1/agent-channel" } as any,
       store
     );
 

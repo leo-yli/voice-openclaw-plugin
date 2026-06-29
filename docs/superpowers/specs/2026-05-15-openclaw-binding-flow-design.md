@@ -83,7 +83,7 @@
 │  Xalgo Voice Channel Server                                          │
 │                                                                      │
 │  ┌─ HTTPS REST API ─────────┐    ┌─ WebSocket Endpoint ──────────┐  │
-│  │ POST /bindings/codes     │    │ /openclaw/connect             │  │
+│  │ POST /bindings/codes     │    │ /agent-channel/connect             │  │
 │  │ POST /bindings/exchange  │    │   - connect / connected       │  │
 │  │ POST /bindings/rotate    │    │   - ping / pong               │  │
 │  │ DELETE /bindings/me      │    │   - inbound_message etc.      │  │
@@ -178,7 +178,7 @@ instance_id ┘                          (user, instance_id, token_hash)
 interface XalgoVoiceConfig {
   // ─ 已有字段 ─
   enabled: boolean;
-  serverUrl: string;              // WebSocket: wss://channel.xalgo.ai/openclaw/connect
+  serverUrl: string;              // WebSocket: wss://asr-test.jlpay.com/agent-channel/connect
   token: string;                  // channel_token，明文存储
   agentId: string;
   sessionPrefix: string;
@@ -188,7 +188,7 @@ interface XalgoVoiceConfig {
   reconnect: ReconnectConfig;
 
   // ─ 新增字段 ─
-  apiBaseUrl: string;             // REST: https://channel.xalgo.ai (默认值)
+  apiBaseUrl: string;             // REST: https://asr-test.jlpay.com/api/v1/agent-channel (默认值)
   instanceId: string;             // 插件自生成 UUID v4，首次绑定时写入
   deviceLabel?: string;           // 用户自定义名称，可选
   boundAt: string;                // ISO 8601 时间戳，便于诊断
@@ -210,16 +210,16 @@ interface XalgoVoiceConfig {
 - 走 HTTPS（强制 TLS 1.2+）
 - `Content-Type: application/json`
 - 错误码遵循 `application/problem+json`（RFC 7807）
-- 域名假设 `https://channel.xalgo.ai`
+- 域名假设 `https://asr-test.jlpay.com/api/v1/agent-channel`
 
-### 5.1 `POST /v1/openclaw/bindings/exchange`
+### 5.1 `POST /api/v1/agent-channel/bindings/exchange`
 
 插件用绑定码换长期 token。**无需鉴权**（绑定码本身就是身份证明）。
 
 **Request**：
 
 ```http
-POST /v1/openclaw/bindings/exchange HTTP/1.1
+POST /api/v1/agent-channel/bindings/exchange HTTP/1.1
 Content-Type: application/json
 X-Plugin-Version: 0.1.0
 X-Idempotency-Key: <uuid>
@@ -241,7 +241,7 @@ X-Idempotency-Key: <uuid>
   "binding_id": "b_7f3e...",
   "user_id": "xalgo_user_123",
   "user_display_name": "杨立",
-  "ws_url": "wss://channel.xalgo.ai/openclaw/connect"
+  "ws_url": "wss://asr-test.jlpay.com/agent-channel/connect"
 }
 ```
 
@@ -257,14 +257,14 @@ X-Idempotency-Key: <uuid>
 | 409 | `instance_already_bound` | 同 user + instance 已存在 active binding |
 | 429 | `rate_limited` | 触发限流（含 `Retry-After` header） |
 
-### 5.2 `POST /v1/openclaw/bindings/rotate`
+### 5.2 `POST /api/v1/agent-channel/bindings/rotate`
 
 插件主动 Rotate（响应 App 推送的 `token_rotated_notify` 控制事件，或用户在 setup wizard 触发）。
 
 **Request**：
 
 ```http
-POST /v1/openclaw/bindings/rotate HTTP/1.1
+POST /api/v1/agent-channel/bindings/rotate HTTP/1.1
 Authorization: Bearer <old_channel_token>
 X-Instance-Id: oc_550e8400-...
 Content-Type: application/json
@@ -284,14 +284,14 @@ Content-Type: application/json
 
 旧 token 在响应发出后 **60 秒缓冲期**内仍可用（避免插件还没写盘就被踢），之后服务端单方面失效。
 
-### 5.3 `DELETE /v1/openclaw/bindings/me`
+### 5.3 `DELETE /api/v1/agent-channel/bindings/me`
 
 插件主动解绑（用户在 OpenClaw setup wizard 选"解绑"）。
 
 **Request**：
 
 ```http
-DELETE /v1/openclaw/bindings/me HTTP/1.1
+DELETE /api/v1/agent-channel/bindings/me HTTP/1.1
 Authorization: Bearer <channel_token>
 X-Instance-Id: oc_550e8400-...
 ```
@@ -348,7 +348,7 @@ User              Xalgo App         Channel Server         OpenClaw Plugin
  │                                         │                    │ c. prompt "输入绑定码"
  │  输入 "A3FK9PQX"                                              │
  ├──────────────────────────────────────────────────────────────>│
- │                                         │ POST /v1/openclaw/ │
+ │                                         │ POST /api/v1/agent-channel/ │
  │                                         │ bindings/exchange  │
  │                                         │ {code, instance_id,│
  │                                         │  device_label, ver}│
@@ -457,7 +457,7 @@ User              Xalgo App         Channel Server         OpenClaw Plugin
  │                    │                    │   notify            │
  │                    │                    ├═══════════════════>│
  │                    │                    │                    │ a. 收到 notify
- │                    │                    │ POST /v1/openclaw/ │ b. 用旧 token 调:
+ │                    │                    │ POST /api/v1/agent-channel/ │ b. 用旧 token 调:
  │                    │                    │ bindings/rotate    │
  │                    │                    │ Bearer <old_token> │
  │                    │                    │ X-Instance-Id: oc..│

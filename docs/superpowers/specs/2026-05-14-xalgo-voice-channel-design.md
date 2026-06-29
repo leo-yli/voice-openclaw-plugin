@@ -481,7 +481,7 @@ Agent 判断 R2+ → confirmation.ts 生成 request → send
 ```typescript
 interface XalgoVoiceConfig {
   enabled: boolean;
-  serverUrl: string;              // "wss://channel.xalgo.ai/openclaw/connect"
+  serverUrl: string;              // "wss://asr-test.jlpay.com/agent-channel/connect"
   token: string;                  // XALGO_CHANNEL_TOKEN
   agentId: string;                // "voice"
   sessionPrefix: string;          // "xalgo_voice"

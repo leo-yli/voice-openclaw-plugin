@@ -38,7 +38,7 @@ describe("Integration: binding lifecycle", () => {
       {
         token: "test_token",
         serverUrl: `ws://localhost:${port}`,
-        apiBaseUrl: "https://api.example.com",
+        apiBaseUrl: "https://api.example.com/api/v1/agent-channel",
       } as any,
       store
     );
@@ -99,7 +99,7 @@ describe("Integration: binding lifecycle", () => {
         {
           token: "test_token",
           serverUrl: `ws://localhost:${port}`,
-          apiBaseUrl: "https://api.example.com",
+          apiBaseUrl: "https://api.example.com/api/v1/agent-channel",
         } as any,
         store
       );
@@ -113,7 +113,7 @@ describe("Integration: binding lifecycle", () => {
       expect(memoryConfig["channels.xalgo_voice.token"]).toBe("new_token_after_rotate");
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toContain("/v1/openclaw/bindings/rotate");
+      expect(url).toContain("/api/v1/agent-channel/bindings/rotate");
       expect((init.headers as Record<string, string>).authorization).toBe("Bearer test_token");
 
       await channel.stop();

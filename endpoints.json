@@ -1,5 +1,5 @@
 {
   "$comment": "Channel Server 端点统一配置。切换环境（测试/生产）只需改这个文件。运行时这些值会成为 DEFAULT_CONFIG 的默认值；用户在 OpenClaw 配置里显式设置仍然优先。",
-  "apiBaseUrl": "https://asr-test.jlpay.com",
-  "serverUrl": "wss://asr-test.jlpay.com/openclaw/connect"
+  "apiBaseUrl": "https://asr-test.jlpay.com/api/v1/agent-channel",
+  "serverUrl": "wss://asr-test.jlpay.com/agent-channel/connect"
 }

@@ -146,7 +146,7 @@ XALGO_CHANNEL_TOKEN
 OpenClaw 启动后主动连接：
 
 ```text
-wss://channel.xalgo.ai/openclaw/connect
+wss://asr-test.jlpay.com/agent-channel/connect
 ```
 
 Xalgo App 显示：
@@ -300,7 +300,7 @@ voice-openclaw-plugin/
           },
           "serverUrl": {
             "type": "string",
-            "default": "wss://channel.xalgo.ai/openclaw/connect"
+            "default": "wss://asr-test.jlpay.com/agent-channel/connect"
           },
           "token": {
             "type": "string"
@@ -338,7 +338,7 @@ voice-openclaw-plugin/
   "channels": {
     "xalgoVoice": {
       "enabled": true,
-      "serverUrl": "wss://channel.xalgo.ai/openclaw/connect",
+      "serverUrl": "wss://asr-test.jlpay.com/agent-channel/connect",
       "token": "${XALGO_CHANNEL_TOKEN}",
       "agentId": "voice",
       "sessionPrefix": "xalgo_voice",
@@ -366,7 +366,7 @@ voice-openclaw-plugin/
 OpenClaw 插件主动连接：
 
 ```text
-wss://channel.xalgo.ai/openclaw/connect
+wss://asr-test.jlpay.com/agent-channel/connect
 ```
 
 ### 11.1 connect

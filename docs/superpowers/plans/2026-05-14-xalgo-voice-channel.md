@@ -149,7 +149,7 @@
       },
       "serverUrl": {
         "type": "string",
-        "default": "wss://channel.xalgo.ai/openclaw/connect"
+        "default": "wss://asr-test.jlpay.com/agent-channel/connect"
       },
       "token": {
         "type": "string"
@@ -381,7 +381,7 @@ export interface XalgoVoiceConfig {
 
 export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   enabled: false,
-  serverUrl: "wss://channel.xalgo.ai/openclaw/connect",
+  serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
   agentId: "voice",
   sessionPrefix: "xalgo_voice",
   streaming: true,
@@ -2367,9 +2367,9 @@ export default async function setup(context: {
   }
 
   const serverUrl = await context.prompt(
-    "Channel Server 地址 (默认: wss://channel.xalgo.ai/openclaw/connect):"
+    "Channel Server 地址 (默认: wss://asr-test.jlpay.com/agent-channel/connect):"
   );
-  const url = serverUrl.trim() || "wss://channel.xalgo.ai/openclaw/connect";
+  const url = serverUrl.trim() || "wss://asr-test.jlpay.com/agent-channel/connect";
 
   context.log("");
   context.log("正在验证连接...");

@@ -72,7 +72,7 @@ import { resolveConfig, DEFAULT_CONFIG } from "../../src/config.js";
 describe("resolveConfig", () => {
   it("includes new binding fields with defaults", () => {
     const cfg = resolveConfig({ token: "t" });
-    expect(cfg.apiBaseUrl).toBe("https://channel.xalgo.ai");
+    expect(cfg.apiBaseUrl).toBe("https://asr-test.jlpay.com/api/v1/agent-channel");
     expect(cfg.instanceId).toBe("");
     expect(cfg.boundAt).toBe("");
     expect(cfg.boundUserId).toBe("");
@@ -136,7 +136,7 @@ export interface XalgoVoiceConfig {
 
 export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   enabled: false,
-  serverUrl: "wss://channel.xalgo.ai/openclaw/connect",
+  serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
   agentId: "voice",
   sessionPrefix: "xalgo_voice",
   streaming: true,
@@ -151,7 +151,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
     maxDelayMs: 30000,
     resume: true,
   },
-  apiBaseUrl: "https://channel.xalgo.ai",
+  apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
   instanceId: "",
   deviceLabel: "",
   boundAt: "",
@@ -622,7 +622,7 @@ describe("RestClient.exchange", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/exchange");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/exchange");
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body);
     expect(body.code).toBe("A3FK9PQX");
@@ -819,7 +819,7 @@ export function createRestClient(apiBaseUrl: string): RestClient {
     async exchange(req: ExchangeRequest): Promise<ExchangeResponse> {
       const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const res = await postWithRetry(
-        "/v1/openclaw/bindings/exchange",
+        "/api/v1/agent-channel/bindings/exchange",
         {
           code: req.code,
           instance_id: req.instanceId,
@@ -855,7 +855,7 @@ export function createRestClient(apiBaseUrl: string): RestClient {
 
     async rotate(oldToken: string, instanceId: string): Promise<{ channelToken: string }> {
       const res = await postWithRetry(
-        "/v1/openclaw/bindings/rotate",
+        "/api/v1/agent-channel/bindings/rotate",
         {},
         {
           authorization: `Bearer ${oldToken}`,
@@ -871,7 +871,7 @@ export function createRestClient(apiBaseUrl: string): RestClient {
     },
 
     async unbind(token: string, instanceId: string): Promise<void> {
-      const res = await doFetch(`${base}/v1/openclaw/bindings/me`, {
+      const res = await doFetch(`${base}/api/v1/agent-channel/bindings/me`, {
         method: "DELETE",
         headers: {
           authorization: `Bearer ${token}`,
@@ -937,7 +937,7 @@ describe("RestClient.rotate", () => {
     const result = await client.rotate("old", "oc_uuid");
     expect(result.channelToken).toBe("xvc_live_new");
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/rotate");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/rotate");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer old");
     expect((init.headers as Record<string, string>)["x-instance-id"]).toBe("oc_uuid");
   });
@@ -968,7 +968,7 @@ describe("RestClient.unbind", () => {
     const client = createRestClient("https://api.example.com");
     await expect(client.unbind("t", "oc_uuid")).resolves.toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/me");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/me");
     expect(init.method).toBe("DELETE");
   });
 
@@ -1160,7 +1160,7 @@ import { createLogger } from "./src/logger.js";
 const log = createLogger("setup");
 
 const PLUGIN_VERSION = "0.1.0";
-const DEFAULT_API_BASE_URL = "https://channel.xalgo.ai";
+const DEFAULT_API_BASE_URL = "https://asr-test.jlpay.com/api/v1/agent-channel";
 const CODE_REGEX = /^[A-HJKMNPQRTV-Y3-9]{8}$/i;
 // Base32 字符集 - 0/O/1/I/L/S/2/Z，再去掉 U/W 防混淆
 
@@ -2799,7 +2799,7 @@ describe("Integration: binding lifecycle", () => {
       expect(memoryConfig["channels.xalgoVoice.token"]).toBe("new_token_after_rotate");
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0];
-      expect(url).toContain("/v1/openclaw/bindings/rotate");
+      expect(url).toContain("/api/v1/agent-channel/bindings/rotate");
       expect((init.headers as Record<string, string>).authorization).toBe("Bearer old_token");
 
       await channel.stop();
@@ -2855,7 +2855,7 @@ openclaw plugins setup xalgo-voice
 向导会引导：
 
 1. 输入 8 位绑定码（不区分大小写）
-2. 输入 API Server 地址（默认 `https://channel.xalgo.ai`）
+2. 输入 API Server 地址（默认 `https://asr-test.jlpay.com/api/v1/agent-channel`）
 3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
 4. 自动写入配置文件并建立 WebSocket 连接
 

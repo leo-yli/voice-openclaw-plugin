@@ -7,6 +7,8 @@ describe("resolveConfig", () => {
     const cfg = resolveConfig({ token: "t" });
     expect(cfg.apiBaseUrl).toBe(endpoints.apiBaseUrl);
     expect(cfg.serverUrl).toBe(endpoints.serverUrl);
+    expect(cfg.apiBaseUrl).toBe("https://asr-test.jlpay.com/api/v1/agent-channel");
+    expect(cfg.serverUrl).toBe("wss://asr-test.jlpay.com/agent-channel/connect");
     expect(cfg.instanceId).toBe("");
     expect(cfg.boundAt).toBe("");
     expect(cfg.boundUserId).toBe("");

@@ -9,8 +9,8 @@
 
 | 用途 | URL |
 |---|---|
-| REST API base | `https://asr-test.jlpay.com` |
-| WebSocket | `wss://asr-test.jlpay.com/openclaw/connect` |
+| REST API base | `https://asr-test.jlpay.com/api/v1/agent-channel` |
+| WebSocket | `wss://asr-test.jlpay.com/agent-channel/connect` |
 
 切换生产环境时只改 `endpoints.json` 一个文件，本契约其它内容不变。
 
@@ -19,9 +19,9 @@
 ## 目录
 
 - [一、HTTPS REST API（3 个 endpoint）](#一https-rest-api3-个-endpoint)
-  - [1. POST /v1/openclaw/bindings/exchange](#1-post-v1openclawbindingsexchange)
-  - [2. POST /v1/openclaw/bindings/rotate](#2-post-v1openclawbindingsrotate)
-  - [3. DELETE /v1/openclaw/bindings/me](#3-delete-v1openclawbindingsme)
+  - [1. POST /api/v1/agent-channel/bindings/exchange](#1-post-apiv1agent-channelbindingsexchange)
+  - [2. POST /api/v1/agent-channel/bindings/rotate](#2-post-apiv1agent-channelbindingsrotate)
+  - [3. GET /api/v1/agent-channel/bindings/me](#3-get-apiv1agent-channelbindingsme)
 - [二、WebSocket 连接与握手](#二websocket-连接与握手)
 - [三、运行时业务消息（WebSocket）](#三运行时业务消息websocket)
 - [四、错误码字典](#四错误码字典)
@@ -41,14 +41,14 @@
 
 ---
 
-### 1. `POST /v1/openclaw/bindings/exchange`
+### 1. `POST /api/v1/agent-channel/bindings/exchange`
 
 **用途**：插件用绑定码换长期 Channel Token + binding 记录创建。**首次绑定唯一入口**，无需鉴权（绑定码本身是身份证明）。
 
 #### Request
 
 ```http
-POST /v1/openclaw/bindings/exchange HTTP/1.1
+POST /api/v1/agent-channel/bindings/exchange HTTP/1.1
 Host: asr-test.jlpay.com
 Content-Type: application/json
 X-Plugin-Version: 2026.5.16
@@ -80,7 +80,7 @@ X-Idempotency-Key: idem_<timestamp>_<random>
   "binding_id": "b_7f3e...",
   "user_id": "xalgo_user_123",
   "user_display_name": "杨立",
-  "ws_url": "wss://asr-test.jlpay.com/openclaw/connect"
+  "ws_url": "wss://asr-test.jlpay.com/agent-channel/connect"
 }
 ```
 
@@ -113,14 +113,14 @@ X-Idempotency-Key: idem_<timestamp>_<random>
 
 ---
 
-### 2. `POST /v1/openclaw/bindings/rotate`
+### 2. `POST /api/v1/agent-channel/bindings/rotate`
 
 **用途**：插件用旧 token 换新 token，由服务端推 `token_rotated_notify` 控制事件触发。
 
 #### Request
 
 ```http
-POST /v1/openclaw/bindings/rotate HTTP/1.1
+POST /api/v1/agent-channel/bindings/rotate HTTP/1.1
 Host: asr-test.jlpay.com
 Content-Type: application/json
 Authorization: Bearer <old_channel_token>
@@ -156,14 +156,14 @@ X-Instance-Id: oc_550e8400-...
 
 ---
 
-### 3. `DELETE /v1/openclaw/bindings/me`
+### 3. `GET /api/v1/agent-channel/bindings/me`
 
-**用途**：插件主动解绑（用户在 OpenClaw setup wizard 选「解绑」）。
+**用途**：插件查询当前绑定信息。
 
 #### Request
 
 ```http
-DELETE /v1/openclaw/bindings/me HTTP/1.1
+GET /api/v1/agent-channel/bindings/me HTTP/1.1
 Host: asr-test.jlpay.com
 Authorization: Bearer <channel_token>
 X-Instance-Id: oc_550e8400-...
@@ -173,7 +173,14 @@ X-Instance-Id: oc_550e8400-...
 
 #### Response
 
-- **204 No Content** → 客户端清空本地 config
+```json
+{
+  "binding_id": "b_7f3e...",
+  "user_id": "xalgo_user_123",
+  "user_display_name": "杨立"
+}
+```
+
 - 401/410 → `ExchangeError(auth_failed)` 等
 - 5xx → `ExchangeError(server_error)`，**不重试**（让上层决定）
 
@@ -184,7 +191,7 @@ X-Instance-Id: oc_550e8400-...
 ### 端点
 
 ```
-wss://asr-test.jlpay.com/openclaw/connect
+wss://asr-test.jlpay.com/agent-channel/connect
 ```
 
 ⚠️ 客户端**无 query parameter**，所有鉴权都在握手后的第一个 JSON 帧里（不是 URL query 或 HTTP Authorization header）。
@@ -406,7 +413,7 @@ REST + WebSocket 鉴权统一错误名表（客户端按这些字符串识别错
 
 请服务端工程师重点核对：
 
-- [ ] **REST 路径**：`/v1/openclaw/bindings/{exchange,rotate,me}` —— `me` 是固定字面量（不是 `:id`）
+- [ ] **REST 路径**：`/api/v1/agent-channel/bindings/{exchange,rotate,me}` —— `me` 是固定字面量（不是 `:id`）
 - [ ] **Header 命名**：`x-instance-id` / `x-plugin-version` / `x-idempotency-key`（lowercase），`Authorization: Bearer ...`（标准）
 - [ ] **请求体字段命名**：snake_case (`instance_id` / `device_label` / `plugin_version` / `channel_token` / `user_display_name` / `ws_url`)
 - [ ] **错误响应**：`application/problem+json` + `{ "type": "<error_name>", ... }`

@@ -144,7 +144,7 @@ export const xalgoVoiceSetupWizard: any = {
           throw new Error(
             `服务端尚未实现绑定接口（HTTP ${err.httpStatus} from ${err.requestUrl}）。\n` +
               `请联系后端对照 docs/api-contract.md 实现 ` +
-              `POST /v1/openclaw/bindings/exchange 等 3 个 REST endpoint。\n` +
+              `POST /api/v1/agent-channel/bindings/exchange 等 3 个 REST endpoint。\n` +
               `响应内容: ${err.responseBodySnippet ?? "(空)"}`,
           );
         }

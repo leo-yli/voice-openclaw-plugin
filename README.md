@@ -190,8 +190,8 @@ alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
   "channels": {
     "xalgo_voice": {
       "enabled": true,
-      "serverUrl": "wss://asr-test.jlpay.com/openclaw/connect",
-      "apiBaseUrl": "https://asr-test.jlpay.com",
+      "serverUrl": "wss://asr-test.jlpay.com/agent-channel/connect",
+      "apiBaseUrl": "https://asr-test.jlpay.com/api/v1/agent-channel",
       "token": "<绑定向导自动写入>",
       "instanceId": "<绑定向导自动写入>",
       "agentId": "voice",
@@ -220,8 +220,8 @@ alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
 | 配置项 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `enabled` | boolean | `false` | 是否启用插件，绑定向导成功后自动设为 `true` |
-| `serverUrl` | string | `wss://asr-test.jlpay.com/openclaw/connect` | WebSocket Channel Server 地址 |
-| `apiBaseUrl` | string | `https://asr-test.jlpay.com` | REST API base，用于 exchange、rotate、unbind |
+| `serverUrl` | string | `wss://asr-test.jlpay.com/agent-channel/connect` | WebSocket Channel Server 地址 |
+| `apiBaseUrl` | string | `https://asr-test.jlpay.com/api/v1/agent-channel` | REST API base，用于 exchange、rotate、unbind |
 | `token` | string | 绑定向导自动写入 | Xalgo Channel Token，请勿手动修改 |
 | `instanceId` | string | 绑定向导自动生成 UUID v4 | 插件实例 ID，作为设备指纹参与鉴权 |
 | `boundUserId` / `boundUserName` / `boundAt` | string | 绑定向导自动写入 | 仅供展示 |

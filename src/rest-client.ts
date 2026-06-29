@@ -4,6 +4,9 @@ const log = createLogger("rest-client");
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const RETRY_DELAYS_MS = [1000, 2000, 4000]; // 3 次重试
+const BINDINGS_EXCHANGE_PATH = "/bindings/exchange";
+const BINDINGS_ROTATE_PATH = "/bindings/rotate";
+const BINDINGS_ME_PATH = "/bindings/me";
 
 export interface ExchangeRequest {
   code: string;
@@ -19,6 +22,12 @@ export interface ExchangeResponse {
   userId: string;
   userDisplayName: string;
   wsUrl: string;
+}
+
+export interface BindingMeResponse {
+  bindingId: string;
+  userId: string;
+  userDisplayName?: string;
 }
 
 export type ExchangeErrorType =
@@ -65,6 +74,7 @@ export class ExchangeError extends Error {
 export interface RestClient {
   exchange(req: ExchangeRequest): Promise<ExchangeResponse>;
   rotate(oldToken: string, instanceId: string): Promise<{ channelToken: string }>;
+  me(token: string, instanceId: string): Promise<BindingMeResponse>;
   unbind(token: string, instanceId: string): Promise<void>;
 }
 
@@ -162,7 +172,7 @@ export function createRestClient(apiBaseUrl: string): RestClient {
     async exchange(req: ExchangeRequest): Promise<ExchangeResponse> {
       const idempotencyKey = `idem_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const res = await postWithRetry(
-        "/v1/openclaw/bindings/exchange",
+        BINDINGS_EXCHANGE_PATH,
         {
           code: req.code,
           instance_id: req.instanceId,
@@ -187,7 +197,7 @@ export function createRestClient(apiBaseUrl: string): RestClient {
         };
       }
 
-      const url = `${base}/v1/openclaw/bindings/exchange`;
+      const url = `${base}${BINDINGS_EXCHANGE_PATH}`;
       const { problem, bodySnippet } = await parseProblemJson(res);
       const type = mapErrorType(res.status, problem.type);
       const retryAfter = res.headers.get("retry-after");
@@ -204,9 +214,9 @@ export function createRestClient(apiBaseUrl: string): RestClient {
     },
 
     async rotate(oldToken: string, instanceId: string): Promise<{ channelToken: string }> {
-      const url = `${base}/v1/openclaw/bindings/rotate`;
+      const url = `${base}${BINDINGS_ROTATE_PATH}`;
       const res = await postWithRetry(
-        "/v1/openclaw/bindings/rotate",
+        BINDINGS_ROTATE_PATH,
         {},
         {
           authorization: `Bearer ${oldToken}`,
@@ -227,8 +237,35 @@ export function createRestClient(apiBaseUrl: string): RestClient {
       );
     },
 
+    async me(token: string, instanceId: string): Promise<BindingMeResponse> {
+      const url = `${base}${BINDINGS_ME_PATH}`;
+      const res = await doFetch(url, {
+        method: "GET",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "x-instance-id": instanceId,
+        },
+      });
+      if (res.status === 200) {
+        const data = (await res.json()) as Record<string, string>;
+        return {
+          bindingId: data.binding_id,
+          userId: data.user_id,
+          userDisplayName: data.user_display_name,
+        };
+      }
+      const { problem, bodySnippet } = await parseProblemJson(res);
+      throw new ExchangeError(
+        mapErrorType(res.status, problem.type),
+        undefined,
+        res.status,
+        bodySnippet,
+        url,
+      );
+    },
+
     async unbind(token: string, instanceId: string): Promise<void> {
-      const url = `${base}/v1/openclaw/bindings/me`;
+      const url = `${base}${BINDINGS_ME_PATH}`;
       const res = await doFetch(url, {
         method: "DELETE",
         headers: {

@@ -68,8 +68,8 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       instanceId: "oc_123",
       boundAt: "2026-05-19T03:39:43.192Z",
       boundUserId: "default-user",
-      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
-      apiBaseUrl: "https://asr-test.jlpay.com",
+      serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
+      apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
     expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
@@ -84,8 +84,8 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       instanceId: "oc_123",
       boundAt: "2026-05-19T03:39:43.192Z",
       boundUserId: "default-user",
-      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
-      apiBaseUrl: "https://asr-test.jlpay.com",
+      serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
+      apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
     expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
@@ -96,8 +96,8 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       enabled: true,
       token: "xvc_live_abc",
       instanceId: "oc_123",
-      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
-      apiBaseUrl: "https://asr-test.jlpay.com",
+      serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
+      apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
     expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
@@ -112,8 +112,8 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       instanceId: "oc_123",
       boundAt: "2026-05-19T03:39:43.192Z",
       boundUserId: "default-user",
-      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
-      apiBaseUrl: "https://asr-test.jlpay.com",
+      serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
+      apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
     const inspected = xalgoVoiceSetupWizard.credentials[0].inspect({ cfg });
@@ -130,7 +130,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       enabled: true,
       token: "xvc_live_abc",
       instanceId: "oc_123",
-      serverUrl: "wss://asr-test.jlpay.com/openclaw/connect",
+      serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
     });
 
     const lines = xalgoVoiceSetupWizard.status.resolveStatusLines({
@@ -331,7 +331,7 @@ function makeCompleteConfig() {
         boundAt: "2026-05-19T03:39:43.192Z",
         boundUserId: "default-user",
         serverUrl: "ws://127.0.0.1:1",
-        apiBaseUrl: "https://asr-test.jlpay.com",
+        apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
         reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
       },
     },
@@ -373,7 +373,7 @@ describe("createInboundAdapter startup", () => {
           token: "xvc_live_abc",
           instanceId: "oc_123",
           serverUrl: "ws://127.0.0.1:1",
-          apiBaseUrl: "https://asr-test.jlpay.com",
+          apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
           reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
         },
       },
@@ -551,7 +551,7 @@ docker logs <openclaw-container-name> 2>&1 | grep -Ei "xalgo|xalgo-voice|WebSock
 Expected logs include:
 
 ```text
-[xalgo-voice:channel] Channel start requested: serverUrl=wss://asr-test.jlpay.com/openclaw/connect token=set instanceId=oc_... missing=none
+[xalgo-voice:channel] Channel start requested: serverUrl=wss://asr-test.jlpay.com/agent-channel/connect token=set instanceId=oc_... missing=none
 [xalgo-voice:client] WebSocket connected
 ```
 

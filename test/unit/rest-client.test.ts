@@ -44,7 +44,7 @@ describe("RestClient.exchange", () => {
       )
     );
 
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     const resp = await client.exchange({
       code: "A3FK9PQX",
       instanceId: "oc_uuid",
@@ -59,7 +59,7 @@ describe("RestClient.exchange", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/exchange");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/exchange");
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body);
     expect(body.code).toBe("A3FK9PQX");
@@ -73,7 +73,7 @@ describe("RestClient.exchange", () => {
         { status: 410, headers: { "content-type": "application/problem+json" } }
       )
     );
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(
       client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "code_expired" });
@@ -86,7 +86,7 @@ describe("RestClient.exchange", () => {
         { status: 429, headers: { "content-type": "application/problem+json", "retry-after": "30" } }
       )
     );
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     const err = await client
       .exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
       .catch((e) => e);
@@ -97,7 +97,7 @@ describe("RestClient.exchange", () => {
 
   it("retries on 500 up to 3 times then throws server_error", async () => {
     fetchMock.mockResolvedValue(new Response("oops", { status: 500 }));
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(
       client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "server_error" });
@@ -106,7 +106,7 @@ describe("RestClient.exchange", () => {
 
   it("throws network_error on fetch rejection", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(
       client.exchange({ code: "A3FK9PQX", instanceId: "oc_x", deviceLabel: "h", pluginVersion: "2026.5.16" })
     ).rejects.toMatchObject({ type: "network_error" });
@@ -132,11 +132,11 @@ describe("RestClient.rotate", () => {
         { status: 200, headers: { "content-type": "application/json" } }
       )
     );
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     const result = await client.rotate("old", "oc_uuid");
     expect(result.channelToken).toBe("xvc_live_new");
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/rotate");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/rotate");
     expect((init.headers as Record<string, string>).authorization).toBe("Bearer old");
     expect((init.headers as Record<string, string>)["x-instance-id"]).toBe("oc_uuid");
   });
@@ -145,7 +145,7 @@ describe("RestClient.rotate", () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ type: "auth_failed" }), { status: 401 })
     );
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(client.rotate("bad", "oc_uuid")).rejects.toMatchObject({ type: "auth_failed" });
   });
 });
@@ -164,10 +164,10 @@ describe("RestClient.unbind", () => {
 
   it("resolves silently on 204", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(client.unbind("t", "oc_uuid")).resolves.toBeUndefined();
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://api.example.com/v1/openclaw/bindings/me");
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/me");
     expect(init.method).toBe("DELETE");
   });
 
@@ -175,7 +175,38 @@ describe("RestClient.unbind", () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ type: "auth_failed" }), { status: 401 })
     );
-    const client = createRestClient("https://api.example.com");
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
     await expect(client.unbind("bad", "oc_uuid")).rejects.toMatchObject({ type: "auth_failed" });
+  });
+});
+
+describe("RestClient.me", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("loads current binding with GET /bindings/me", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ binding_id: "b_1", user_id: "u_1" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = createRestClient("https://api.example.com/api/v1/agent-channel");
+    const result = await client.me("t", "oc_uuid");
+
+    expect(result.bindingId).toBe("b_1");
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://api.example.com/api/v1/agent-channel/bindings/me");
+    expect(init.method).toBe("GET");
+    expect((init.headers as Record<string, string>).authorization).toBe("Bearer t");
+    expect((init.headers as Record<string, string>)["x-instance-id"]).toBe("oc_uuid");
   });
 });

@@ -13,7 +13,7 @@ function makeCompleteConfig() {
         boundAt: "2026-05-19T03:39:43.192Z",
         boundUserId: "default-user",
         serverUrl: "ws://127.0.0.1:1",
-        apiBaseUrl: "https://asr-test.jlpay.com",
+        apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
         reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
       },
     },
@@ -30,7 +30,7 @@ function makeCompleteAccountConfig() {
         boundAt: "2026-05-19T03:39:43.192Z",
         boundUserId: "default-user",
         serverUrl: "ws://127.0.0.1:1",
-        apiBaseUrl: "https://asr-test.jlpay.com",
+        apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
         reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
       },
     },
@@ -53,7 +53,7 @@ describe("xalgo account config resolution", () => {
       boundAt: "2026-05-19T03:39:43.192Z",
       boundUserId: "default-user",
       serverUrl: "ws://127.0.0.1:1",
-      apiBaseUrl: "https://asr-test.jlpay.com",
+      apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
     expect(account).toMatchObject({
@@ -122,7 +122,7 @@ describe("createInboundAdapter startup", () => {
           token: "xvc_live_abc",
           instanceId: "oc_123",
           serverUrl: "ws://127.0.0.1:1",
-          apiBaseUrl: "https://asr-test.jlpay.com",
+          apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
           reconnect: { minDelayMs: 1000, maxDelayMs: 1000, resume: true },
         },
       },
