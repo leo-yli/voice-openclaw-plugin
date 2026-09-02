@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 `@xalgo/voice-openclaw-plugin` 实施基于绑定码 + 长期 Token + instance_id 双因子的绑定流程，覆盖 spec 中 P1-P3 阶段（基础绑定、控制事件、鉴权增强）。
+**Goal:** 为 `@museve/voice-openclaw-plugin` 实施基于绑定码 + 长期 Token + instance_id 双因子的绑定流程，覆盖 spec 中 P1-P3 阶段（基础绑定、控制事件、鉴权增强）。
 
 **Architecture:** 新增 3 个核心模块（binding-store / rest-client / control-events），改写 setup-entry，扩展 config / protocol / client，通过 HTTPS REST 完成绑定/解绑/rotate，通过 WebSocket 新增 control_event 推送绑定生命周期变化。
 
@@ -114,7 +114,7 @@ export interface ReconnectConfig {
   resume: boolean;
 }
 
-export interface XalgoVoiceConfig {
+export interface MuseveVoiceConfig {
   enabled: boolean;
   serverUrl: string;
   token: string;
@@ -134,11 +134,11 @@ export interface XalgoVoiceConfig {
   boundUserName: string;
 }
 
-export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
+export const DEFAULT_CONFIG: Omit<MuseveVoiceConfig, "token"> = {
   enabled: false,
   serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
   agentId: "voice",
-  sessionPrefix: "xalgo_voice",
+  sessionPrefix: "museve_voice",
   streaming: true,
   replyMode: "voice_first",
   riskPolicy: {
@@ -159,7 +159,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   boundUserName: "",
 };
 
-export function resolveConfig(raw: Partial<XalgoVoiceConfig> & { token: string }): XalgoVoiceConfig {
+export function resolveConfig(raw: Partial<MuseveVoiceConfig> & { token: string }): MuseveVoiceConfig {
   return {
     ...DEFAULT_CONFIG,
     ...raw,
@@ -175,13 +175,13 @@ Run: `npx vitest run test/unit/config.test.ts`
 Expected: PASS
 
 Run: `npm run lint`
-Expected: 无错误（确认 `XalgoVoiceConfig` 新字段未被现有代码引用到错误的位置）
+Expected: 无错误（确认 `MuseveVoiceConfig` 新字段未被现有代码引用到错误的位置）
 
 - [ ] **Step 5: 提交**
 
 ```bash
 "/d/Program Files/Git/cmd/git.exe" add src/config.ts test/unit/config.test.ts
-"/d/Program Files/Git/cmd/git.exe" commit -m "feat(config): add binding-related fields to XalgoVoiceConfig"
+"/d/Program Files/Git/cmd/git.exe" commit -m "feat(config): add binding-related fields to MuseveVoiceConfig"
 ```
 
 ---
@@ -326,7 +326,7 @@ describe("BindingStore", () => {
   });
 
   it("partial data (missing required fields) is treated as unbound", async () => {
-    adapter.storage["channels.xalgoVoice.token"] = "t";
+    adapter.storage["channels.museveVoice.token"] = "t";
     // 缺 instanceId
     const store = createBindingStore(adapter);
     expect(await store.read()).toBeNull();
@@ -375,12 +375,12 @@ export interface StoreAdapter {
 }
 
 const KEYS = {
-  token: "channels.xalgoVoice.token",
-  instanceId: "channels.xalgoVoice.instanceId",
-  boundAt: "channels.xalgoVoice.boundAt",
-  boundUserId: "channels.xalgoVoice.boundUserId",
-  boundUserName: "channels.xalgoVoice.boundUserName",
-  deviceLabel: "channels.xalgoVoice.deviceLabel",
+  token: "channels.museveVoice.token",
+  instanceId: "channels.museveVoice.instanceId",
+  boundAt: "channels.museveVoice.boundAt",
+  boundUserId: "channels.museveVoice.boundUserId",
+  boundUserName: "channels.museveVoice.boundUserName",
+  deviceLabel: "channels.museveVoice.deviceLabel",
 } as const;
 
 export function createBindingStore(adapter: StoreAdapter): BindingStore {
@@ -1064,10 +1064,10 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBe("xvc_live_xyz");
-    expect(storage["channels.xalgoVoice.boundUserId"]).toBe("u_1");
-    expect(typeof storage["channels.xalgoVoice.instanceId"]).toBe("string");
-    expect((storage["channels.xalgoVoice.instanceId"] as string).startsWith("oc_")).toBe(true);
+    expect(storage["channels.museveVoice.token"]).toBe("xvc_live_xyz");
+    expect(storage["channels.museveVoice.boundUserId"]).toBe("u_1");
+    expect(typeof storage["channels.museveVoice.instanceId"]).toBe("string");
+    expect((storage["channels.museveVoice.instanceId"] as string).startsWith("oc_")).toBe(true);
     expect(logs.some((l) => l.includes("绑定成功") || l.includes("已保存"))).toBe(true);
   });
 
@@ -1092,7 +1092,7 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.museveVoice.token"]).toBeFalsy();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][1].method).toBe("DELETE");
   });
@@ -1109,35 +1109,35 @@ describe("setup-entry", () => {
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.museveVoice.token"]).toBeFalsy();
     expect(logs.some((l) => l.includes("已过期"))).toBe(true);
   });
 
   it("empty code input → abort silently", async () => {
     const { storage, context } = makeContext([""]);
     await setup(context);
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.museveVoice.token"]).toBeFalsy();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("invalid code format (length != 8) → log error and abort", async () => {
     const { storage, logs, context } = makeContext(["SHORT"]);
     await setup(context);
-    expect(storage["channels.xalgoVoice.token"]).toBeFalsy();
+    expect(storage["channels.museveVoice.token"]).toBeFalsy();
     expect(logs.some((l) => l.includes("格式"))).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("existing binding + action=1 (keep) → no changes", async () => {
     const { storage, context } = makeContext(["1"]);
-    storage["channels.xalgoVoice.token"] = "old_token";
-    storage["channels.xalgoVoice.instanceId"] = "oc_existing";
-    storage["channels.xalgoVoice.boundAt"] = "2026-05-14T00:00:00Z";
-    storage["channels.xalgoVoice.boundUserId"] = "u_old";
+    storage["channels.museveVoice.token"] = "old_token";
+    storage["channels.museveVoice.instanceId"] = "oc_existing";
+    storage["channels.museveVoice.boundAt"] = "2026-05-14T00:00:00Z";
+    storage["channels.museveVoice.boundUserId"] = "u_old";
 
     await setup(context);
 
-    expect(storage["channels.xalgoVoice.token"]).toBe("old_token");
+    expect(storage["channels.museveVoice.token"]).toBe("old_token");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
@@ -1221,7 +1221,7 @@ async function handleUnbind(
 }
 
 export default async function setup(context: SetupContext): Promise<void> {
-  context.log("Xalgo Voice Channel 配置向导");
+  context.log("Museve Voice Channel 配置向导");
   context.log("────────────────────────────");
   context.log("");
 
@@ -1256,7 +1256,7 @@ export default async function setup(context: SetupContext): Promise<void> {
 
   // 2. prompt 绑定码
   context.log("");
-  context.log("请在 Xalgo App 中点击「连接 OpenClaw」获取 8 位绑定码。");
+  context.log("请在 Museve App 中点击「连接 OpenClaw」获取 8 位绑定码。");
   const code = (await context.prompt("请输入绑定码:")).trim().toUpperCase();
   if (!code) {
     context.log("已取消。");
@@ -1320,9 +1320,9 @@ export default async function setup(context: SetupContext): Promise<void> {
     boundUserName: resp.userDisplayName,
     deviceLabel: `OpenClaw on ${os.hostname()}`,
   });
-  await context.writeConfig("channels.xalgoVoice.enabled", true);
-  await context.writeConfig("channels.xalgoVoice.apiBaseUrl", apiBaseUrl);
-  await context.writeConfig("channels.xalgoVoice.serverUrl", resp.wsUrl);
+  await context.writeConfig("channels.museveVoice.enabled", true);
+  await context.writeConfig("channels.museveVoice.apiBaseUrl", apiBaseUrl);
+  await context.writeConfig("channels.museveVoice.serverUrl", resp.wsUrl);
 
   context.log("✓ 绑定成功，配置已保存。");
   context.log("  插件启动后会自动建立 WebSocket 连接。");
@@ -1426,7 +1426,7 @@ Expected: FAIL（XvcClient 构造器签名不匹配）
 修改构造器并新增 `getInstanceId()`，找到这段：
 
 ```typescript
-constructor(config: XalgoVoiceConfig, events: ClientEvents) {
+constructor(config: MuseveVoiceConfig, events: ClientEvents) {
     this.config = config;
     this.events = events;
     this.reconnect = new ReconnectManager(config.reconnect);
@@ -1438,7 +1438,7 @@ constructor(config: XalgoVoiceConfig, events: ClientEvents) {
 
 ```typescript
 constructor(
-  config: XalgoVoiceConfig,
+  config: MuseveVoiceConfig,
   events: ClientEvents,
   private bindingStore: BindingStore
 ) {
@@ -1483,12 +1483,12 @@ private async sendConnect(): Promise<void> {
     protocol_version: 1,
     client: {
       kind: "openclaw",
-      plugin: "@xalgo/voice-openclaw-plugin",
+      plugin: "@museve/voice-openclaw-plugin",
       plugin_version: "0.1.0",
       instance_id: binding.instanceId,
       device_name: binding.deviceLabel ?? "OpenClaw Instance",
     },
-    channel: "xalgo_voice",
+    channel: "museve_voice",
     auth: { token: binding.token },
     capabilities: [
       "text_message",
@@ -1545,7 +1545,7 @@ this.sendResume().catch((err) => log.error("sendResume failed", err));
 找到这段：
 
 ```typescript
-constructor(rawConfig: Partial<XalgoVoiceConfig> & { token: string }) {
+constructor(rawConfig: Partial<MuseveVoiceConfig> & { token: string }) {
     this.config = resolveConfig(rawConfig);
     ...
     this.client = new XvcClient(this.config, {
@@ -1558,7 +1558,7 @@ constructor(rawConfig: Partial<XalgoVoiceConfig> & { token: string }) {
 
 ```typescript
 constructor(
-  rawConfig: Partial<XalgoVoiceConfig> & { token: string },
+  rawConfig: Partial<MuseveVoiceConfig> & { token: string },
   bindingStore: BindingStore
 ) {
   this.config = resolveConfig(rawConfig);
@@ -1591,7 +1591,7 @@ import type { BindingStore } from "./binding-store.js";
 import { createBindingStore, type StoreAdapter } from "./binding-store.js";
 
 export function createInboundAdapter() {
-  let channel: XalgoVoiceChannel | null = null;
+  let channel: MuseveVoiceChannel | null = null;
 
   return {
     async start({ config, handleMessage, handleStatus, readConfig, writeConfig }: {
@@ -1603,15 +1603,15 @@ export function createInboundAdapter() {
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
-      const xalgoConfig = config.channels?.xalgoVoice ?? config;
+      const museveConfig = config.channels?.museveVoice ?? config;
       const adapter: StoreAdapter = {
-        read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
+        read: readConfig ?? (async (k) => museveConfig[k.split(".").pop()!]),
         write: writeConfig ?? (async () => {
           log.warn("writeConfig not provided, binding updates will not persist");
         }),
       };
       const store = createBindingStore(adapter);
-      channel = new XalgoVoiceChannel(xalgoConfig, store);
+      channel = new MuseveVoiceChannel(museveConfig, store);
       await channel.start({ handleMessage, handleStatus });
       handleStatus({ status: "ready" });
     },
@@ -1636,26 +1636,26 @@ Expected: 全部 PASS（已有集成测试可能因构造器签名变化失败�
 
 - [ ] **Step 6: 修复其它测试中的构造器调用**
 
-集成测试 `test/integration/mock-server.ts` 不直接构造 XvcClient，但 `test/integration/connect.test.ts` 和 `test/integration/message-flow.test.ts` 如果有构造 `XalgoVoiceChannel`，需要补 store 参数。
+集成测试 `test/integration/mock-server.ts` 不直接构造 XvcClient，但 `test/integration/connect.test.ts` 和 `test/integration/message-flow.test.ts` 如果有构造 `MuseveVoiceChannel`，需要补 store 参数。
 
 Run: `npx vitest run test/integration/`
-找到所有 `new XalgoVoiceChannel(...)` 调用，给每个补一个 in-memory binding-store stub：
+找到所有 `new MuseveVoiceChannel(...)` 调用，给每个补一个 in-memory binding-store stub：
 
 ```typescript
 import { createBindingStore } from "../../src/binding-store.js";
 
 const memory: Record<string, unknown> = {
-  "channels.xalgoVoice.token": "test_token",
-  "channels.xalgoVoice.instanceId": "oc_test_instance",
-  "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-  "channels.xalgoVoice.boundUserId": "u_test",
+  "channels.museveVoice.token": "test_token",
+  "channels.museveVoice.instanceId": "oc_test_instance",
+  "channels.museveVoice.boundAt": "2026-05-15T00:00:00Z",
+  "channels.museveVoice.boundUserId": "u_test",
 };
 const store = createBindingStore({
   read: async (k) => memory[k],
   write: async (k, v) => { memory[k] = v; },
 });
 
-const channel = new XalgoVoiceChannel(config, store);
+const channel = new MuseveVoiceChannel(config, store);
 ```
 
 - [ ] **Step 7: 运行所有测试**
@@ -2113,10 +2113,10 @@ import { createEvent } from "../../src/protocol.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgoVoice.token": "t",
-    "channels.xalgoVoice.instanceId": "oc_test",
-    "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-    "channels.xalgoVoice.boundUserId": "u_1",
+    "channels.museveVoice.token": "t",
+    "channels.museveVoice.instanceId": "oc_test",
+    "channels.museveVoice.boundAt": "2026-05-15T00:00:00Z",
+    "channels.museveVoice.boundUserId": "u_1",
   };
   return createBindingStore({
     read: async (k) => data[k],
@@ -2301,16 +2301,16 @@ Expected: 全部 PASS
 
 ```typescript
 import { describe, it, expect, vi } from "vitest";
-import { XalgoVoiceChannel } from "../../src/channel.js";
+import { MuseveVoiceChannel } from "../../src/channel.js";
 import { createBindingStore } from "../../src/binding-store.js";
 import { createEvent } from "../../src/protocol.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgoVoice.token": "t",
-    "channels.xalgoVoice.instanceId": "oc_test",
-    "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-    "channels.xalgoVoice.boundUserId": "u_1",
+    "channels.museveVoice.token": "t",
+    "channels.museveVoice.instanceId": "oc_test",
+    "channels.museveVoice.boundAt": "2026-05-15T00:00:00Z",
+    "channels.museveVoice.boundUserId": "u_1",
   };
   return {
     store: createBindingStore({
@@ -2323,12 +2323,12 @@ function makeStore() {
   };
 }
 
-describe("XalgoVoiceChannel + control events", () => {
+describe("MuseveVoiceChannel + control events", () => {
   it("on binding_revoked: clears local binding and emits unbound status", async () => {
     const { store, data } = makeStore();
     const statusUpdates: string[] = [];
 
-    const channel = new XalgoVoiceChannel(
+    const channel = new MuseveVoiceChannel(
       { token: "t", apiBaseUrl: "https://api.example.com" } as any,
       store
     );
@@ -2350,7 +2350,7 @@ describe("XalgoVoiceChannel + control events", () => {
     // 等待异步 handler 完成
     await new Promise((r) => setTimeout(r, 50));
 
-    expect(data["channels.xalgoVoice.token"]).toBe("");
+    expect(data["channels.museveVoice.token"]).toBe("");
     expect(statusUpdates).toContain("unbound");
 
     await channel.stop();
@@ -2373,7 +2373,7 @@ import { createRestClient, type RestClient } from "./rest-client.js";
 import type { BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
 ```
 
-在 `XalgoVoiceChannel` 类里新增字段：
+在 `MuseveVoiceChannel` 类里新增字段：
 
 ```typescript
 private bindingStore: BindingStore;
@@ -2385,7 +2385,7 @@ private controlEvents: ControlEventHandler;
 
 ```typescript
 constructor(
-  rawConfig: Partial<XalgoVoiceConfig> & { token: string },
+  rawConfig: Partial<MuseveVoiceConfig> & { token: string },
   bindingStore: BindingStore
 ) {
   this.config = resolveConfig(rawConfig);
@@ -2482,7 +2482,7 @@ Expected: 全部 PASS
 
 - [ ] **Step 1: 在 mock-server.ts 添加推送 control_event 的方法**
 
-在 `MockXalgoServer` 类内找到 `sendInboundMessage` 方法附近，新增：
+在 `MockMuseveServer` 类内找到 `sendInboundMessage` 方法附近，新增：
 
 ```typescript
 import { createEvent, type BindingRevokedPayload, type TokenRotatedNotifyPayload } from "../../src/protocol.js";
@@ -2555,10 +2555,10 @@ import { createBindingStore } from "../../src/binding-store.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgoVoice.token": "t",
-    "channels.xalgoVoice.instanceId": "oc_test",
-    "channels.xalgoVoice.boundAt": "ts",
-    "channels.xalgoVoice.boundUserId": "u_1",
+    "channels.museveVoice.token": "t",
+    "channels.museveVoice.instanceId": "oc_test",
+    "channels.museveVoice.boundAt": "ts",
+    "channels.museveVoice.boundUserId": "u_1",
   };
   return { store: createBindingStore({ read: async (k) => data[k], write: async (k, v) => { data[k] = v; } }), data };
 }
@@ -2686,16 +2686,16 @@ Expected: 全部 PASS
 
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
-import { XalgoVoiceChannel } from "../../src/channel.js";
+import { MockMuseveServer } from "./mock-server.js";
+import { MuseveVoiceChannel } from "../../src/channel.js";
 import { createBindingStore } from "../../src/binding-store.js";
 
 describe("Integration: binding lifecycle", () => {
-  let mock: MockXalgoServer;
+  let mock: MockMuseveServer;
   let port: number;
 
   beforeEach(async () => {
-    mock = new MockXalgoServer({ heartbeatIntervalMs: 5000 });
+    mock = new MockMuseveServer({ heartbeatIntervalMs: 5000 });
     port = await mock.start();
   });
 
@@ -2705,11 +2705,11 @@ describe("Integration: binding lifecycle", () => {
 
   it("happy path: connect with stored binding → exchange messages → server revokes → channel emits unbound status", async () => {
     const memoryConfig: Record<string, unknown> = {
-      "channels.xalgoVoice.token": "test_token",
-      "channels.xalgoVoice.instanceId": "oc_test_inst",
-      "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgoVoice.boundUserId": "u_1",
-      "channels.xalgoVoice.boundUserName": "杨立",
+      "channels.museveVoice.token": "test_token",
+      "channels.museveVoice.instanceId": "oc_test_inst",
+      "channels.museveVoice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museveVoice.boundUserId": "u_1",
+      "channels.museveVoice.boundUserName": "杨立",
     };
     const store = createBindingStore({
       read: async (k) => memoryConfig[k],
@@ -2721,7 +2721,7 @@ describe("Integration: binding lifecycle", () => {
     const statusUpdates: string[] = [];
     const messages: unknown[] = [];
 
-    const channel = new XalgoVoiceChannel(
+    const channel = new MuseveVoiceChannel(
       {
         token: "test_token",
         serverUrl: `ws://localhost:${port}`,
@@ -2748,8 +2748,8 @@ describe("Integration: binding lifecycle", () => {
     await new Promise((r) => setTimeout(r, 300));
 
     // 验证本地清空 + 状态切到 unbound
-    expect(memoryConfig["channels.xalgoVoice.token"]).toBe("");
-    expect(memoryConfig["channels.xalgoVoice.instanceId"]).toBe("");
+    expect(memoryConfig["channels.museveVoice.token"]).toBe("");
+    expect(memoryConfig["channels.museveVoice.instanceId"]).toBe("");
     expect(statusUpdates).toContain("unbound");
 
     await channel.stop();
@@ -2769,10 +2769,10 @@ describe("Integration: binding lifecycle", () => {
 
     try {
       const memoryConfig: Record<string, unknown> = {
-        "channels.xalgoVoice.token": "old_token",
-        "channels.xalgoVoice.instanceId": "oc_test_inst",
-        "channels.xalgoVoice.boundAt": "2026-05-15T00:00:00Z",
-        "channels.xalgoVoice.boundUserId": "u_1",
+        "channels.museveVoice.token": "old_token",
+        "channels.museveVoice.instanceId": "oc_test_inst",
+        "channels.museveVoice.boundAt": "2026-05-15T00:00:00Z",
+        "channels.museveVoice.boundUserId": "u_1",
       };
       const store = createBindingStore({
         read: async (k) => memoryConfig[k],
@@ -2781,7 +2781,7 @@ describe("Integration: binding lifecycle", () => {
         },
       });
 
-      const channel = new XalgoVoiceChannel(
+      const channel = new MuseveVoiceChannel(
         {
           token: "old_token",
           serverUrl: `ws://localhost:${port}`,
@@ -2796,7 +2796,7 @@ describe("Integration: binding lifecycle", () => {
       mock.pushTokenRotatedNotify("b_1");
       await new Promise((r) => setTimeout(r, 300));
 
-      expect(memoryConfig["channels.xalgoVoice.token"]).toBe("new_token_after_rotate");
+      expect(memoryConfig["channels.museveVoice.token"]).toBe("new_token_after_rotate");
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toContain("/api/v1/agent-channel/bindings/rotate");
@@ -2842,29 +2842,29 @@ Expected: 无错误
 ```markdown
 ## 配置
 
-### 1. 在 Xalgo App 生成绑定码
+### 1. 在 Museve App 生成绑定码
 
-打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
+打开 Museve App，点击「连接 OpenClaw」，App 会显示一个 **8 位绑定码**（5 分钟内有效）。
 
 ### 2. 在 OpenClaw 运行配置向导
 
 ```bash
-openclaw plugins setup xalgo-voice
+openclaw plugins setup museve-voice
 ```
 
 向导会引导：
 
 1. 输入 8 位绑定码（不区分大小写）
 2. 输入 API Server 地址（默认 `https://asr-test.jlpay.com/api/v1/agent-channel`）
-3. 显示要绑定到的 Xalgo 账号，确认 `[y/N]`
+3. 显示要绑定到的 Museve 账号，确认 `[y/N]`
 4. 自动写入配置文件并建立 WebSocket 连接
 
 ### 3. 设备管理
 
 绑定成功后：
 
-- 在 **Xalgo App → 设备列表** 可以查看已绑定的 OpenClaw、修改设备名、解绑、Rotate Token
-- 在 **OpenClaw 终端** 重新运行 `openclaw plugins setup xalgo-voice` 可以选择「保持现状 / 重新绑定 / 解绑」
+- 在 **Museve App → 设备列表** 可以查看已绑定的 OpenClaw、修改设备名、解绑、Rotate Token
+- 在 **OpenClaw 终端** 重新运行 `openclaw plugins setup museve-voice` 可以选择「保持现状 / 重新绑定 / 解绑」
 
 ### 4. 安全说明
 

@@ -7,7 +7,7 @@ export interface MockServerOptions {
   heartbeatIntervalMs?: number;
 }
 
-export class MockXalgoServer {
+export class MockMuseveServer {
   private wss: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
   private token: string;
@@ -75,7 +75,7 @@ export class MockXalgoServer {
       message_id: `msg_${Date.now()}`,
       session_id: "voice_session_test",
       agent_binding_id: "agent_binding_test",
-      chat_id: `xalgo:user:${userId}`,
+      chat_id: `museve:user:${userId}`,
       chat_type: "direct",
       sender: { id: userId, name: "Test User" },
       text,
@@ -157,7 +157,7 @@ export class MockXalgoServer {
       if (payload.auth.token === this.token) {
         const connected: ConnectedPayload = {
           connection_id: `conn_${Date.now()}`,
-          user_id: "xalgo_user_test",
+          user_id: "museve_user_test",
           heartbeat_interval_ms: this.heartbeatIntervalMs,
           server_capabilities: ["asr_final", "tts_playback", "duplex_interrupt"],
         };

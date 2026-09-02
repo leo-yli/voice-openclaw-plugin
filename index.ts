@@ -1,7 +1,7 @@
 import type { OpenClawApi } from "openclaw";
 import {
-  hasCompleteXalgoBinding,
-  resolveXalgoAccount,
+  hasCompleteMuseveBinding,
+  resolveMuseveAccount,
 } from "./src/account-config.js";
 import {
   createGatewayAdapter,
@@ -9,8 +9,8 @@ import {
   outbound,
 } from "./src/channel.js";
 import {
-  xalgoVoiceSetupWizard,
-  xalgoVoiceSetupAdapter,
+  museveVoiceSetupWizard,
+  museveVoiceSetupAdapter,
 } from "./src/onboarding.js";
 
 /**
@@ -27,10 +27,10 @@ import {
  * and the channel never registers (Shape: non-capability).
  */
 const plugin = {
-  id: "xalgo_voice",
-  name: "Xalgo Voice",
+  id: "museve_voice",
+  name: "Museve Voice",
   description:
-    "通过 Xalgo 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
+    "通过 Museve 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
   configSchema: {
     type: "object" as const,
     additionalProperties: true,
@@ -38,13 +38,13 @@ const plugin = {
   register(api: OpenClawApi): void {
     api.registerChannel({
       plugin: {
-        id: "xalgo_voice",
+        id: "museve_voice",
         meta: {
-          id: "xalgo_voice",
-          label: "Xalgo Voice",
-          selectionLabel: "Xalgo Voice（Xalgo 眼镜语音接入 OpenClaw）",
-          docsPath: "/channels/xalgo-voice",
-          blurb: "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
+          id: "museve_voice",
+          label: "Museve Voice",
+          selectionLabel: "Museve Voice（Museve 眼镜语音接入 OpenClaw）",
+          docsPath: "/channels/museve-voice",
+          blurb: "通过 Museve 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
         },
         capabilities: {
           chatTypes: ["direct"],
@@ -57,9 +57,9 @@ const plugin = {
         config: {
           listAccountIds: () => ["default"],
           resolveAccount: (cfg: any, accountId?: string) =>
-            resolveXalgoAccount(cfg, accountId),
+            resolveMuseveAccount(cfg, accountId),
           isEnabled: (account: any) => account?.enabled !== false,
-          isConfigured: (account: any) => hasCompleteXalgoBinding(account),
+          isConfigured: (account: any) => hasCompleteMuseveBinding(account),
         },
         outbound,
         inbound: createInboundAdapter(),
@@ -67,8 +67,8 @@ const plugin = {
         // ★ 关键：声明式 setup wizard，'openclaw channels add' 命令会用
         //   到这两个字段来 prompt 用户输入 8 位绑定码并完成 exchange。
         //   参考 wecom-openclaw-plugin 的同款实现方式。
-        setupWizard: xalgoVoiceSetupWizard,
-        setup: xalgoVoiceSetupAdapter,
+        setupWizard: museveVoiceSetupWizard,
+        setup: museveVoiceSetupAdapter,
       } as any,
     });
 
@@ -78,8 +78,8 @@ const plugin = {
 };
 
 /**
- * 探测 OpenClaw config 里是否已写入 channels.xalgo_voice.token。
- * 没写入说明 setup 流程没跑完，提示用户运行 xalgo-bind。
+ * 探测 OpenClaw config 里是否已写入 channels.museve_voice.token。
+ * 没写入说明 setup 流程没跑完，提示用户运行 museve-bind。
  *
  * 用 api.runtime?.getConfig 优先；如果不存在退化到读 ~/.openclaw/openclaw.json。
  */
@@ -92,7 +92,7 @@ function warnIfUnbound(api: OpenClawApi): void {
       typeof runtime?.getConfig === "function"
         ? runtime.getConfig()
         : (api as any).config ?? {};
-    token = resolveXalgoAccount(cfg).token as string | undefined;
+    token = resolveMuseveAccount(cfg).token as string | undefined;
   } catch {
     /* ignore */
   }
@@ -104,19 +104,19 @@ function warnIfUnbound(api: OpenClawApi): void {
     "┌────────────────────────────────────────────────────────────────┐",
   );
   console.log(
-    "│  [xalgo_voice] Channel registered but NOT bound yet.           │",
+    "│  [museve_voice] Channel registered but NOT bound yet.           │",
   );
   console.log(
     "│  Run the binding wizard to receive an 8-digit code from        │",
   );
   console.log(
-    "│  Xalgo App and exchange it for a Channel Token:                │",
+    "│  Museve App and exchange it for a Channel Token:                │",
   );
   console.log(
     "│                                                                │",
   );
   console.log(
-    "│    node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js │",
+    "│    node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js │",
   );
   console.log(
     "│                                                                │",

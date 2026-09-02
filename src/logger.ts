@@ -19,7 +19,7 @@ function shouldLog(level: LogLevel): boolean {
 
 function formatMessage(level: LogLevel, tag: string, msg: string): string {
   const ts = new Date().toISOString();
-  return `[${ts}] [${level.toUpperCase()}] [xalgo-voice:${tag}] ${msg}`;
+  return `[${ts}] [${level.toUpperCase()}] [museve-voice:${tag}] ${msg}`;
 }
 
 export function createLogger(tag: string) {

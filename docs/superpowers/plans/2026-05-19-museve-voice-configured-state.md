@@ -1,8 +1,8 @@
-# Xalgo Voice Configured State Implementation Plan
+# Museve Voice Configured State Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make OpenClaw mark `xalgo_voice` as configured/runnable when a complete binding exists, so the channel runtime starts and the plugin attempts the WebSocket connection.
+**Goal:** Make OpenClaw mark `museve_voice` as configured/runnable when a complete binding exists, so the channel runtime starts and the plugin attempts the WebSocket connection.
 
 **Architecture:** Follow the WeCom setup wizard pattern: centralize config resolution, define configured state as a validation over required credentials, and keep setup/status logic consistent with runtime binding requirements. Add focused diagnostics at the channel boundary so logs prove whether OpenClaw called `inbound.start`, which config was loaded, and whether the WebSocket client attempted to connect.
 
@@ -20,12 +20,12 @@ WeCom's open-source setup wizard (`WecomTeam/wecom-openclaw-plugin/src/onboardin
 - `disable` is non-destructive and only sets `enabled: false`.
 - Config access is centralized behind helpers rather than repeated direct path reads.
 
-Apply the same pattern to Xalgo Voice, with our required runtime binding fields: `enabled`, `token`, `instanceId`, `boundAt`, `boundUserId`, `serverUrl`, and `apiBaseUrl`.
+Apply the same pattern to Museve Voice, with our required runtime binding fields: `enabled`, `token`, `instanceId`, `boundAt`, `boundUserId`, `serverUrl`, and `apiBaseUrl`.
 
 ## File structure
 
 - Modify `src/onboarding.ts`
-  - Add small helpers for resolving `channels.xalgo_voice` and validating complete binding state.
+  - Add small helpers for resolving `channels.museve_voice` and validating complete binding state.
   - Use those helpers in `status.resolveConfigured`, `resolveStatusLines`, `introNote.shouldShow`, credential `inspect`, `completionNote.shouldShow`, and `finalize`.
 - Modify `src/channel.ts`
   - Add runtime startup diagnostics.
@@ -50,17 +50,17 @@ Create `test/unit/onboarding.test.ts` with this content:
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { xalgoVoiceSetupWizard } from "../../src/onboarding.js";
+import { museveVoiceSetupWizard } from "../../src/onboarding.js";
 
 function makeCfg(channel: Record<string, unknown>) {
   return {
     channels: {
-      xalgo_voice: channel,
+      museve_voice: channel,
     },
   };
 }
 
-describe("xalgoVoiceSetupWizard configured state", () => {
+describe("museveVoiceSetupWizard configured state", () => {
   it("treats a complete enabled binding as configured", () => {
     const cfg = makeCfg({
       enabled: true,
@@ -72,9 +72,9 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
-    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
-    expect(xalgoVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(false);
   });
 
   it("treats a disabled binding as not configured", () => {
@@ -88,7 +88,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
   });
 
   it("treats partial binding data as not configured", () => {
@@ -100,9 +100,9 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
-    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(false);
-    expect(xalgoVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(true);
   });
 
   it("credential inspect reports configured only for complete binding", () => {
@@ -116,7 +116,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    const inspected = xalgoVoiceSetupWizard.credentials[0].inspect({ cfg });
+    const inspected = museveVoiceSetupWizard.credentials[0].inspect({ cfg });
 
     expect(inspected).toEqual({
       accountConfigured: true,
@@ -133,7 +133,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
     });
 
-    const lines = xalgoVoiceSetupWizard.status.resolveStatusLines({
+    const lines = museveVoiceSetupWizard.status.resolveStatusLines({
       cfg,
       configured: false,
     });
@@ -173,7 +173,7 @@ Do not commit after the failing test alone unless the user explicitly asks for g
 Replace the existing `ensureChannel` helper block at `src/onboarding.ts:22-27` with this code:
 
 ```ts
-type XalgoChannelSetupConfig = Record<string, unknown>;
+type MuseveChannelSetupConfig = Record<string, unknown>;
 
 const REQUIRED_BINDING_FIELDS = [
   "token",
@@ -185,22 +185,22 @@ const REQUIRED_BINDING_FIELDS = [
 ] as const;
 
 /** 取/初始化 channel config 块 */
-function ensureChannel(cfg: any): XalgoChannelSetupConfig {
+function ensureChannel(cfg: any): MuseveChannelSetupConfig {
   cfg.channels ??= {};
   cfg.channels[CHANNEL_ID] ??= {};
   return cfg.channels[CHANNEL_ID];
 }
 
-function resolveChannel(cfg: any): XalgoChannelSetupConfig {
+function resolveChannel(cfg: any): MuseveChannelSetupConfig {
   return cfg?.channels?.[CHANNEL_ID] ?? {};
 }
 
-function readNonEmptyString(channel: XalgoChannelSetupConfig, key: string): string {
+function readNonEmptyString(channel: MuseveChannelSetupConfig, key: string): string {
   const value = channel[key];
   return typeof value === "string" ? value.trim() : "";
 }
 
-function missingBindingFields(channel: XalgoChannelSetupConfig): string[] {
+function missingBindingFields(channel: MuseveChannelSetupConfig): string[] {
   const missing = REQUIRED_BINDING_FIELDS.filter(
     (field) => !readNonEmptyString(channel, field),
   );
@@ -208,7 +208,7 @@ function missingBindingFields(channel: XalgoChannelSetupConfig): string[] {
   return missing;
 }
 
-function hasCompleteBinding(channel: XalgoChannelSetupConfig): boolean {
+function hasCompleteBinding(channel: MuseveChannelSetupConfig): boolean {
   return missingBindingFields(channel).length === 0;
 }
 ```
@@ -221,22 +221,22 @@ Replace `status` object body at `src/onboarding.ts:51-66` with this code:
   status: {
     configuredLabel: "已绑定 ✓",
     unconfiguredLabel: "需要 8 位绑定码",
-    configuredHint: "已绑定到 Xalgo 账号",
+    configuredHint: "已绑定到 Museve 账号",
     unconfiguredHint: "未绑定",
     resolveConfigured: ({ cfg }: any) => hasCompleteBinding(resolveChannel(cfg)),
     resolveStatusLines: ({ cfg, configured }: any) => {
       const channel = resolveChannel(cfg);
       if (configured) {
         return [
-          `Xalgo Voice: 已绑定到 ${readNonEmptyString(channel, "boundUserName") || readNonEmptyString(channel, "boundUserId") || "(未知)"}`,
+          `Museve Voice: 已绑定到 ${readNonEmptyString(channel, "boundUserName") || readNonEmptyString(channel, "boundUserId") || "(未知)"}`,
         ];
       }
 
       const missing = missingBindingFields(channel);
       return [
         missing.length > 0
-          ? `Xalgo Voice: 未绑定或配置不完整（缺少 ${missing.join(", ")}）`
-          : "Xalgo Voice: 未绑定（需要 8 位绑定码）",
+          ? `Museve Voice: 未绑定或配置不完整（缺少 ${missing.join(", ")}）`
+          : "Museve Voice: 未绑定（需要 8 位绑定码）",
       ];
     },
   },
@@ -324,7 +324,7 @@ import { createInboundAdapter } from "../../src/channel.js";
 function makeCompleteConfig() {
   return {
     channels: {
-      xalgo_voice: {
+      museve_voice: {
         enabled: true,
         token: "xvc_live_abc",
         instanceId: "oc_123",
@@ -355,7 +355,7 @@ describe("createInboundAdapter startup", () => {
       config,
       handleMessage: () => {},
       handleStatus: (status) => statuses.push(status.status),
-      readConfig: makeReadConfig(config.channels.xalgo_voice),
+      readConfig: makeReadConfig(config.channels.museve_voice),
       writeConfig: async () => {},
     });
 
@@ -368,7 +368,7 @@ describe("createInboundAdapter startup", () => {
   it("reports unbound and does not construct a websocket when required binding fields are missing", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "xvc_live_abc",
           instanceId: "oc_123",
@@ -385,7 +385,7 @@ describe("createInboundAdapter startup", () => {
       config,
       handleMessage: () => {},
       handleStatus: (status) => statuses.push(status.status),
-      readConfig: makeReadConfig(config.channels.xalgo_voice),
+      readConfig: makeReadConfig(config.channels.museve_voice),
       writeConfig: async () => {},
     });
 
@@ -449,9 +449,9 @@ function describeRuntimeConfig(config: Record<string, unknown>): string {
 Replace `src/channel.ts:203-214` inside `start` with this code:
 
 ```ts
-      const xalgoConfig = config.channels?.xalgo_voice ?? config;
+      const museveConfig = config.channels?.museve_voice ?? config;
       const adapter: StoreAdapter = {
-        read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
+        read: readConfig ?? (async (k) => museveConfig[k.split(".").pop()!]),
         write: writeConfig ?? (async () => {
           log.warn("writeConfig not provided, binding updates will not persist");
         }),
@@ -459,13 +459,13 @@ Replace `src/channel.ts:203-214` inside `start` with this code:
       const store = createBindingStore(adapter);
       const binding = await store.read();
       if (!binding) {
-        log.warn(`Channel start skipped: incomplete binding ${describeRuntimeConfig(xalgoConfig)}`);
+        log.warn(`Channel start skipped: incomplete binding ${describeRuntimeConfig(museveConfig)}`);
         handleStatus({ status: "unbound" });
         return;
       }
 
-      log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
-      channel = new XalgoVoiceChannel(xalgoConfig, store);
+      log.info(`Channel start requested: ${describeRuntimeConfig(museveConfig)}`);
+      channel = new MuseveVoiceChannel(museveConfig, store);
       await channel.start({ handleMessage, handleStatus });
 ```
 
@@ -533,7 +533,7 @@ Expected: PASS and `dist/` updated.
 After installing the rebuilt plugin into the OpenClaw container and restarting OpenClaw, check status JSON. Expected change:
 
 ```json
-"xalgo_voice": {
+"museve_voice": {
   "configured": true,
   "running": true,
   "lastStartAt": 1779162017919,
@@ -545,14 +545,14 @@ After installing the rebuilt plugin into the OpenClaw container and restarting O
 Filter container logs:
 
 ```bash
-docker logs <openclaw-container-name> 2>&1 | grep -Ei "xalgo|xalgo-voice|WebSocket|binding|auth|channel"
+docker logs <openclaw-container-name> 2>&1 | grep -Ei "museve|museve-voice|WebSocket|binding|auth|channel"
 ```
 
 Expected logs include:
 
 ```text
-[xalgo-voice:channel] Channel start requested: serverUrl=wss://asr-test.jlpay.com/agent-channel/connect token=set instanceId=oc_... missing=none
-[xalgo-voice:client] WebSocket connected
+[museve-voice:channel] Channel start requested: serverUrl=wss://asr-test.jlpay.com/agent-channel/connect token=set instanceId=oc_... missing=none
+[museve-voice:client] WebSocket connected
 ```
 
 If service-side auth succeeds, expected status should later include `connected` or equivalent runtime online state. If logs show `WebSocket error`, continue debugging network/TLS. If logs show `Authentication failed`, continue debugging token/instance mismatch with the server.
@@ -563,4 +563,4 @@ If service-side auth succeeds, expected status should later include `connected` 
 
 - Spec coverage: The plan covers the observed `configured:false` state, aligns configured-state validation with runtime binding requirements, prevents synthetic `ready` from masking real connection state, and adds startup diagnostics for container logs.
 - Placeholder scan: No TBD/TODO placeholders remain. Commands, expected outcomes, and code snippets are explicit.
-- Type consistency: New helpers use `Record<string, unknown>` and existing exported `xalgoVoiceSetupWizard`/`createInboundAdapter` names. Status strings match current runtime strings plus existing `unbound` usage in `src/channel.ts`.
+- Type consistency: New helpers use `Record<string, unknown>` and existing exported `museveVoiceSetupWizard`/`createInboundAdapter` names. Status strings match current runtime strings plus existing `unbound` usage in `src/channel.ts`.

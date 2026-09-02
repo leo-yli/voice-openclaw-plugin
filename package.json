@@ -1,8 +1,8 @@
 {
-  "name": "@xalgo/voice-openclaw-plugin",
+  "name": "@museve/voice-openclaw-plugin",
   "version": "2026.5.16",
   "type": "module",
-  "description": "通过 Xalgo 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
+  "description": "通过 Museve 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -21,7 +21,7 @@
     "postinstall": "node scripts/postinstall.mjs"
   },
   "bin": {
-    "xalgo-bind": "./dist/bin/xalgo-bind.js"
+    "museve-bind": "./dist/bin/museve-bind.js"
   },
   "files": [
     "dist",
@@ -34,14 +34,14 @@
   "openclaw": {
     "extensions": ["./dist/index.js"],
     "channel": {
-      "id": "xalgo_voice",
-      "label": "Xalgo Voice",
-      "selectionLabel": "Xalgo Voice（Xalgo 眼镜语音接入 OpenClaw）",
-      "blurb": "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。"
+      "id": "museve_voice",
+      "label": "Museve Voice",
+      "selectionLabel": "Museve Voice（Museve 眼镜语音接入 OpenClaw）",
+      "blurb": "通过 Museve 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。"
     },
     "install": {
-      "npmSpec": "@xalgo/voice-openclaw-plugin",
-      "localPath": "extensions/xalgo-voice-openclaw-plugin"
+      "npmSpec": "@museve/voice-openclaw-plugin",
+      "localPath": "extensions/museve-voice-openclaw-plugin"
     }
   },
   "dependencies": {

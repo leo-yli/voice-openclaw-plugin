@@ -9,7 +9,7 @@ describe("InterruptHandler", () => {
     created_at: Date.now(),
     idempotency_key: "idem_int_001",
     payload: {
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       session_id: "voice_session_test",
       agent_binding_id: "agent_binding_test",
       duplex_session_id: "duplex_789",
@@ -36,7 +36,7 @@ describe("InterruptHandler", () => {
     expect(result!.sessionId).toBe("voice_session_test");
     expect(result!.agentBindingId).toBe("agent_binding_test");
     expect(result!.replyToId).toBe("reply_001");
-    expect(result!.conversationId).toBe("xalgo:user:u123");
+    expect(result!.conversationId).toBe("museve:user:u123");
   });
 
   it("records playback ledger", () => {

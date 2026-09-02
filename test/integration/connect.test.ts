@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
+import { MockMuseveServer } from "./mock-server.js";
 import { XvcClient } from "../../src/client.js";
 import { resolveConfig } from "../../src/config.js";
 import { createBindingStore } from "../../src/binding-store.js";
 
 describe("integration: connect", () => {
-  let server: MockXalgoServer;
+  let server: MockMuseveServer;
 
   beforeEach(async () => {
-    server = new MockXalgoServer({ token: "valid_token" });
+    server = new MockMuseveServer({ token: "valid_token" });
     await server.start();
   });
 
@@ -20,10 +20,10 @@ describe("integration: connect", () => {
     const statusChanges: string[] = [];
     const config = resolveConfig({ token: "valid_token", serverUrl: server.getUrl() });
     const memory: Record<string, unknown> = {
-      "channels.xalgo_voice.token": "valid_token",
-      "channels.xalgo_voice.instanceId": "oc_test_instance",
-      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgo_voice.boundUserId": "u_test",
+      "channels.museve_voice.token": "valid_token",
+      "channels.museve_voice.instanceId": "oc_test_instance",
+      "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museve_voice.boundUserId": "u_test",
     };
     const store = createBindingStore({
       read: async (k) => memory[k],
@@ -46,10 +46,10 @@ describe("integration: connect", () => {
     const statusChanges: string[] = [];
     const config = resolveConfig({ token: "wrong_token", serverUrl: server.getUrl() });
     const memory: Record<string, unknown> = {
-      "channels.xalgo_voice.token": "wrong_token",
-      "channels.xalgo_voice.instanceId": "oc_test_instance",
-      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgo_voice.boundUserId": "u_test",
+      "channels.museve_voice.token": "wrong_token",
+      "channels.museve_voice.instanceId": "oc_test_instance",
+      "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museve_voice.boundUserId": "u_test",
     };
     const store = createBindingStore({
       read: async (k) => memory[k],

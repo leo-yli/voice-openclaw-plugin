@@ -1,8 +1,8 @@
-# Xalgo Voice OpenClaw Channel Plugin Implementation Plan
+# Museve Voice OpenClaw Channel Plugin Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a full OpenClaw Channel Plugin that connects Xalgo voice devices to OpenClaw agents via WebSocket, supporting streaming replies, voice confirmation, and duplex interrupt.
+**Goal:** Build a full OpenClaw Channel Plugin that connects Museve voice devices to OpenClaw agents via WebSocket, supporting streaming replies, voice confirmation, and duplex interrupt.
 
 **Architecture:** Three-layer design — Channel Layer (OpenClaw plugin interface), Protocol Layer (XVC event dispatch, confirmation, interrupt, streaming), Transport Layer (WebSocket client with heartbeat and reconnect). Single WebSocket connection carries both inbound and outbound messages.
 
@@ -20,7 +20,7 @@
 | `index.ts` | Entry: registers channel plugin with OpenClaw |
 | `setup-entry.ts` | Binding code setup wizard for first-time config |
 | `src/logger.ts` | Thin logging abstraction |
-| `src/config.ts` | `XalgoVoiceConfig` type + defaults + validation |
+| `src/config.ts` | `MuseveVoiceConfig` type + defaults + validation |
 | `src/protocol.ts` | All XVC event type definitions + event envelope |
 | `src/session.ts` | Session ID mapping (direct/room) |
 | `src/client.ts` | WebSocket client: connect, send, receive, ping/pong |
@@ -39,7 +39,7 @@
 | `test/unit/outbound.test.ts` | Outbound message formatting tests |
 | `test/unit/confirmation.test.ts` | Confirmation state machine tests |
 | `test/unit/interrupt.test.ts` | Interrupt + ledger tests |
-| `test/integration/mock-server.ts` | Mock Xalgo Channel Server for integration tests |
+| `test/integration/mock-server.ts` | Mock Museve Channel Server for integration tests |
 | `test/integration/connect.test.ts` | Full connect → auth → connected flow |
 | `test/integration/message-flow.test.ts` | End-to-end message round-trip |
 
@@ -57,10 +57,10 @@
 
 ```json
 {
-  "name": "@xalgo/voice-openclaw-plugin",
+  "name": "@museve/voice-openclaw-plugin",
   "version": "0.1.0",
   "type": "module",
-  "description": "Xalgo Voice Channel plugin for OpenClaw.",
+  "description": "Museve Voice Channel plugin for OpenClaw.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -74,9 +74,9 @@
     "extensions": ["./dist/index.js"],
     "setupEntry": "./dist/setup-entry.js",
     "channel": {
-      "id": "xalgo_voice",
-      "label": "Xalgo Voice",
-      "blurb": "Talk to your OpenClaw agents through Xalgo voice devices."
+      "id": "museve_voice",
+      "label": "Museve Voice",
+      "blurb": "Talk to your OpenClaw agents through Museve voice devices."
     }
   },
   "dependencies": {
@@ -117,25 +117,25 @@
 
 ```json
 {
-  "id": "xalgo_voice",
-  "name": "Xalgo Voice",
+  "id": "museve_voice",
+  "name": "Museve Voice",
   "version": "0.1.0",
-  "description": "Voice channel plugin that connects Xalgo glasses and Pupa voice cloud to OpenClaw agents.",
+  "description": "Voice channel plugin that connects Museve glasses and Pupa voice cloud to OpenClaw agents.",
   "main": "./dist/index.js",
   "openclaw": {
     "extensions": ["./dist/index.js"],
     "setupEntry": "./dist/setup-entry.js",
     "channel": {
-      "id": "xalgo_voice",
-      "label": "Xalgo Voice",
-      "selectionLabel": "Xalgo Voice (语音)",
-      "docsPath": "/channels/xalgo-voice",
-      "blurb": "Talk to your OpenClaw agents through Xalgo voice devices.",
+      "id": "museve_voice",
+      "label": "Museve Voice",
+      "selectionLabel": "Museve Voice (语音)",
+      "docsPath": "/channels/museve-voice",
+      "blurb": "Talk to your OpenClaw agents through Museve voice devices.",
       "order": 200
     },
     "install": {
-      "npmSpec": "@xalgo/voice-openclaw-plugin",
-      "localPath": "extensions/xalgo-voice",
+      "npmSpec": "@museve/voice-openclaw-plugin",
+      "localPath": "extensions/museve-voice",
       "defaultChoice": "npm"
     }
   },
@@ -160,7 +160,7 @@
       },
       "sessionPrefix": {
         "type": "string",
-        "default": "xalgo_voice"
+        "default": "museve_voice"
       },
       "streaming": {
         "type": "boolean",
@@ -175,7 +175,7 @@
     "required": ["token"]
   },
   "uiHints": {
-    "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
+    "token": { "label": "Channel Token", "sensitive": true, "placeholder": "museve_channel_..." },
     "serverUrl": { "label": "Server URL" },
     "agentId": { "label": "Agent ID" },
     "streaming": { "label": "Streaming Replies" },
@@ -208,7 +208,7 @@ function shouldLog(level: LogLevel): boolean {
 
 function formatMessage(level: LogLevel, tag: string, msg: string): string {
   const ts = new Date().toISOString();
-  return `[${ts}] [${level.toUpperCase()}] [xalgo-voice:${tag}] ${msg}`;
+  return `[${ts}] [${level.toUpperCase()}] [museve-voice:${tag}] ${msg}`;
 }
 
 export function createLogger(tag: string) {
@@ -274,7 +274,7 @@ describe("protocol", () => {
       idempotency_key: "idem_001",
       payload: {
         message_id: "msg_001",
-        chat_id: "xalgo:user:u123",
+        chat_id: "museve:user:u123",
         chat_type: "direct",
         sender: { id: "u123", name: "Test" },
         text: "hello",
@@ -324,21 +324,21 @@ import { buildSessionId, parseSessionId } from "../../src/session.js";
 
 describe("session", () => {
   it("builds direct session ID", () => {
-    expect(buildSessionId("direct", "u123", "xalgo_voice")).toBe("xalgo_voice:direct:u123");
+    expect(buildSessionId("direct", "u123", "museve_voice")).toBe("museve_voice:direct:u123");
   });
 
   it("builds room session ID", () => {
-    expect(buildSessionId("room", "room_abc", "xalgo_voice")).toBe("xalgo_voice:room:room_abc");
+    expect(buildSessionId("room", "room_abc", "museve_voice")).toBe("museve_voice:room:room_abc");
   });
 
   it("parses direct session ID", () => {
-    const parsed = parseSessionId("xalgo_voice:direct:u123");
-    expect(parsed).toEqual({ type: "direct", id: "u123", prefix: "xalgo_voice" });
+    const parsed = parseSessionId("museve_voice:direct:u123");
+    expect(parsed).toEqual({ type: "direct", id: "u123", prefix: "museve_voice" });
   });
 
   it("parses room session ID", () => {
-    const parsed = parseSessionId("xalgo_voice:room:room_abc");
-    expect(parsed).toEqual({ type: "room", id: "room_abc", prefix: "xalgo_voice" });
+    const parsed = parseSessionId("museve_voice:room:room_abc");
+    expect(parsed).toEqual({ type: "room", id: "room_abc", prefix: "museve_voice" });
   });
 
   it("returns null for invalid session ID", () => {
@@ -367,7 +367,7 @@ export interface ReconnectConfig {
   resume: boolean;
 }
 
-export interface XalgoVoiceConfig {
+export interface MuseveVoiceConfig {
   enabled: boolean;
   serverUrl: string;
   token: string;
@@ -379,11 +379,11 @@ export interface XalgoVoiceConfig {
   reconnect: ReconnectConfig;
 }
 
-export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
+export const DEFAULT_CONFIG: Omit<MuseveVoiceConfig, "token"> = {
   enabled: false,
   serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
   agentId: "voice",
-  sessionPrefix: "xalgo_voice",
+  sessionPrefix: "museve_voice",
   streaming: true,
   replyMode: "voice_first",
   riskPolicy: {
@@ -398,7 +398,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   },
 };
 
-export function resolveConfig(raw: Partial<XalgoVoiceConfig> & { token: string }): XalgoVoiceConfig {
+export function resolveConfig(raw: Partial<MuseveVoiceConfig> & { token: string }): MuseveVoiceConfig {
   return {
     ...DEFAULT_CONFIG,
     ...raw,
@@ -820,7 +820,7 @@ Expected: All tests PASS.
 ```typescript
 import WebSocket from "ws";
 import { createLogger } from "./logger.js";
-import { type XalgoVoiceConfig } from "./config.js";
+import { type MuseveVoiceConfig } from "./config.js";
 import { ReconnectManager } from "./reconnect.js";
 import {
   parseEvent,
@@ -842,7 +842,7 @@ export interface ClientEvents {
 }
 
 export class XvcClient {
-  private config: XalgoVoiceConfig;
+  private config: MuseveVoiceConfig;
   private ws: WebSocket | null = null;
   private reconnect: ReconnectManager;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -853,7 +853,7 @@ export class XvcClient {
   private events: ClientEvents;
   private instanceId: string;
 
-  constructor(config: XalgoVoiceConfig, events: ClientEvents) {
+  constructor(config: MuseveVoiceConfig, events: ClientEvents) {
     this.config = config;
     this.events = events;
     this.reconnect = new ReconnectManager(config.reconnect);
@@ -912,12 +912,12 @@ export class XvcClient {
       protocol_version: 1,
       client: {
         kind: "openclaw",
-        plugin: "@xalgo/voice-openclaw-plugin",
+        plugin: "@museve/voice-openclaw-plugin",
         plugin_version: "0.1.0",
         instance_id: this.instanceId,
         device_name: "OpenClaw Instance",
       },
-      channel: "xalgo_voice",
+      channel: "museve_voice",
       auth: { token: this.config.token },
       capabilities: [
         "text_message",
@@ -1085,7 +1085,7 @@ describe("inbound", () => {
   it("converts inbound_message to OpenClaw InboundMessage", () => {
     const event = makeEvent({
       message_id: "msg_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       chat_type: "direct",
       sender: { id: "u123", name: "杨立" },
       text: "帮我看看今天有什么待办",
@@ -1106,7 +1106,7 @@ describe("inbound", () => {
     expect(result!.text).toBe("帮我看看今天有什么待办");
     expect(result!.sender.id).toBe("u123");
     expect(result!.sender.name).toBe("杨立");
-    expect(result!.conversationId).toBe("xalgo:user:u123");
+    expect(result!.conversationId).toBe("museve:user:u123");
     expect(result!.conversationType).toBe("direct");
     expect(result!.timestamp).toBe(1718000000000);
     expect(result!.raw).toBe(event.payload);
@@ -1115,7 +1115,7 @@ describe("inbound", () => {
   it("handles missing optional metadata fields", () => {
     const event = makeEvent({
       message_id: "msg_002",
-      chat_id: "xalgo:user:u456",
+      chat_id: "museve:user:u456",
       chat_type: "direct",
       sender: { id: "u456", name: "Test" },
       text: "hello",
@@ -1130,7 +1130,7 @@ describe("inbound", () => {
   it("returns null for empty text", () => {
     const event = makeEvent({
       message_id: "msg_003",
-      chat_id: "xalgo:user:u789",
+      chat_id: "museve:user:u789",
       chat_type: "direct",
       sender: { id: "u789", name: "Test" },
       text: "",
@@ -1197,7 +1197,7 @@ Expected: All tests PASS.
 
 ```bash
 git add src/inbound.ts test/unit/inbound.test.ts
-git commit -m "feat: add inbound message parsing (Xalgo → OpenClaw)"
+git commit -m "feat: add inbound message parsing (Museve → OpenClaw)"
 ```
 
 ---
@@ -1220,7 +1220,7 @@ describe("outbound", () => {
   it("formats a complete reply as outbound_message", () => {
     const result = formatOutboundMessage({
       messageId: "reply_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       replyTo: "msg_001",
       text: "你今天有三个待办",
       replyMode: "voice_first",
@@ -1228,7 +1228,7 @@ describe("outbound", () => {
 
     expect(result.type).toBe("outbound_message");
     expect(result.payload.message_id).toBe("reply_001");
-    expect(result.payload.chat_id).toBe("xalgo:user:u123");
+    expect(result.payload.chat_id).toBe("museve:user:u123");
     expect(result.payload.reply_to).toBe("msg_001");
     expect(result.payload.text).toBe("你今天有三个待办");
     expect(result.payload.metadata.speak).toBe(true);
@@ -1238,7 +1238,7 @@ describe("outbound", () => {
   it("formats text_first reply mode", () => {
     const result = formatOutboundMessage({
       messageId: "reply_002",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       replyTo: "msg_002",
       text: "hello",
       replyMode: "text_first",
@@ -1251,7 +1251,7 @@ describe("outbound", () => {
   it("formats a streaming delta", () => {
     const result = formatOutboundDelta({
       messageId: "reply_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       deltaSeq: 3,
       textDelta: "三个待办",
       spanId: "span_001",
@@ -1269,7 +1269,7 @@ describe("outbound", () => {
   it("formats final delta", () => {
     const result = formatOutboundDelta({
       messageId: "reply_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       deltaSeq: 10,
       textDelta: "",
       spanId: "span_001",
@@ -1358,7 +1358,7 @@ Expected: All tests PASS.
 
 ```bash
 git add src/outbound.ts test/unit/outbound.test.ts
-git commit -m "feat: add outbound message formatting (OpenClaw → Xalgo)"
+git commit -m "feat: add outbound message formatting (OpenClaw → Museve)"
 ```
 
 ---
@@ -1503,7 +1503,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_001",
       text: "确认发送吗？",
       risk_level: "R2",
@@ -1523,7 +1523,7 @@ describe("ConfirmationManager", () => {
 
     mgr.addPending({
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_001",
       text: "确认发送吗？",
       risk_level: "R2",
@@ -1533,7 +1533,7 @@ describe("ConfirmationManager", () => {
 
     const response: ConfirmationResponsePayload = {
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       result: "confirmed",
       text: "确认",
       asr_confidence: 0.95,
@@ -1553,7 +1553,7 @@ describe("ConfirmationManager", () => {
     const expiresAt = Date.now() + 30000;
     mgr.addPending({
       confirmation_id: "conf_002",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_002",
       text: "确认？",
       risk_level: "R2",
@@ -1573,7 +1573,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_003",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_003",
       text: "删除所有数据？",
       risk_level: "R3",
@@ -1590,7 +1590,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_004",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_004",
       text: "删除所有数据？",
       risk_level: "R3",
@@ -1606,7 +1606,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     mgr.addPending({
       confirmation_id: "conf_a",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_a",
       text: "a?",
       risk_level: "R1",
@@ -1615,7 +1615,7 @@ describe("ConfirmationManager", () => {
     });
     mgr.addPending({
       confirmation_id: "conf_b",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_b",
       text: "b?",
       risk_level: "R2",
@@ -1773,7 +1773,7 @@ describe("InterruptHandler", () => {
     created_at: Date.now(),
     idempotency_key: "idem_int_001",
     payload: {
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       duplex_session_id: "duplex_789",
       interrupted_message_id: "reply_001",
       text: "停，直接说下午的",
@@ -1795,7 +1795,7 @@ describe("InterruptHandler", () => {
     expect(onCancel).toHaveBeenCalledWith("reply_001");
     expect(result).not.toBeNull();
     expect(result!.text).toBe("停，直接说下午的");
-    expect(result!.conversationId).toBe("xalgo:user:u123");
+    expect(result!.conversationId).toBe("museve:user:u123");
   });
 
   it("records playback ledger", () => {
@@ -2008,7 +2008,7 @@ git commit -m "feat: add delivery acknowledgment tracker"
 
 ```typescript
 import type { XvcEvent, InboundMessagePayload, ConfirmationResponsePayload, VoiceInterruptPayload, DeliveryAckPayload } from "./protocol.js";
-import { type XalgoVoiceConfig, resolveConfig } from "./config.js";
+import { type MuseveVoiceConfig, resolveConfig } from "./config.js";
 import { XvcClient, type ConnectionStatus } from "./client.js";
 import { parseInboundMessage, type InboundMessage } from "./inbound.js";
 import { formatOutboundMessage } from "./outbound.js";
@@ -2026,8 +2026,8 @@ export interface ChannelCallbacks {
   handleStatus: (status: { status: string }) => void;
 }
 
-export class XalgoVoiceChannel {
-  private config: XalgoVoiceConfig;
+export class MuseveVoiceChannel {
+  private config: MuseveVoiceConfig;
   private client: XvcClient;
   private streaming: StreamingManager;
   private confirmation: ConfirmationManager;
@@ -2035,7 +2035,7 @@ export class XalgoVoiceChannel {
   private delivery: DeliveryTracker;
   private callbacks: ChannelCallbacks | null = null;
 
-  constructor(rawConfig: Partial<XalgoVoiceConfig> & { token: string }) {
+  constructor(rawConfig: Partial<MuseveVoiceConfig> & { token: string }) {
     this.config = resolveConfig(rawConfig);
     this.streaming = new StreamingManager();
     this.confirmation = new ConfirmationManager();
@@ -2145,7 +2145,7 @@ export class XalgoVoiceChannel {
 }
 
 export function createInboundAdapter() {
-  let channel: XalgoVoiceChannel | null = null;
+  let channel: MuseveVoiceChannel | null = null;
 
   return {
     async start({ config, handleMessage, handleStatus }: {
@@ -2155,8 +2155,8 @@ export function createInboundAdapter() {
       handleEvent?: (event: any) => void;
       handleStatus: (status: { status: string }) => void;
     }) {
-      const xalgoConfig = config.channels?.xalgoVoice ?? config;
-      channel = new XalgoVoiceChannel(xalgoConfig);
+      const museveConfig = config.channels?.museveVoice ?? config;
+      channel = new MuseveVoiceChannel(museveConfig);
       await channel.start({ handleMessage, handleStatus });
       handleStatus({ status: "ready" });
     },
@@ -2176,7 +2176,7 @@ export const outbound = {
   listAccountIds: () => ["default"],
 
   resolveAccount: (config: any, accountId?: string) => {
-    return config.channels?.xalgoVoice ?? { accountId: accountId ?? "default" };
+    return config.channels?.museveVoice ?? { accountId: accountId ?? "default" };
   },
 
   async sendText({ account, config, text, context }: {
@@ -2196,16 +2196,16 @@ export const outbound = {
 import type { OpenClawApi } from "openclaw";
 import { createInboundAdapter, outbound } from "./src/channel.js";
 
-export default function registerXalgoVoicePlugin(api: OpenClawApi) {
+export default function registerMuseveVoicePlugin(api: OpenClawApi) {
   api.registerChannel({
     plugin: {
-      id: "xalgo_voice",
+      id: "museve_voice",
       meta: {
-        id: "xalgo_voice",
-        label: "Xalgo Voice",
-        selectionLabel: "Xalgo Voice (语音)",
-        docsPath: "/channels/xalgo-voice",
-        blurb: "Talk to your OpenClaw agents through Xalgo voice devices.",
+        id: "museve_voice",
+        label: "Museve Voice",
+        selectionLabel: "Museve Voice (语音)",
+        docsPath: "/channels/museve-voice",
+        blurb: "Talk to your OpenClaw agents through Museve voice devices.",
       },
       capabilities: {
         chatTypes: ["direct"],
@@ -2218,7 +2218,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
       config: {
         listAccountIds: () => ["default"],
         resolveAccount: (cfg: any, accountId?: string) =>
-          cfg.channels?.xalgoVoice ?? { accountId: accountId ?? "default" },
+          cfg.channels?.museveVoice ?? { accountId: accountId ?? "default" },
       },
       outbound,
       inbound: createInboundAdapter(),
@@ -2226,7 +2226,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   });
 }
 
-export { createInboundAdapter, outbound, XalgoVoiceChannel } from "./src/channel.js";
+export { createInboundAdapter, outbound, MuseveVoiceChannel } from "./src/channel.js";
 ```
 
 - [ ] **Step 3: Create OpenClaw type stub for build**
@@ -2316,12 +2316,12 @@ export async function verifyToken(
         protocol_version: 1,
         client: {
           kind: "openclaw",
-          plugin: "@xalgo/voice-openclaw-plugin",
+          plugin: "@museve/voice-openclaw-plugin",
           plugin_version: "0.1.0",
           instance_id: "setup_verify",
           device_name: "Setup Verification",
         },
-        channel: "xalgo_voice",
+        channel: "museve_voice",
         auth: { token },
         capabilities: ["text_message"],
       });
@@ -2356,11 +2356,11 @@ export default async function setup(context: {
   writeConfig: (key: string, value: unknown) => Promise<void>;
   log: (msg: string) => void;
 }): Promise<void> {
-  context.log("Xalgo Voice Channel 配置向导");
+  context.log("Museve Voice Channel 配置向导");
   context.log("────────────────────────────");
   context.log("");
 
-  const token = await context.prompt("请输入 Xalgo Channel Token (从 Xalgo App 获取):");
+  const token = await context.prompt("请输入 Museve Channel Token (从 Museve App 获取):");
   if (!token.trim()) {
     context.log("错误: Token 不能为空");
     return;
@@ -2377,13 +2377,13 @@ export default async function setup(context: {
   const result = await verifyToken(url, token.trim());
 
   if (result.success) {
-    await context.writeConfig("channels.xalgoVoice.enabled", true);
-    await context.writeConfig("channels.xalgoVoice.token", token.trim());
-    await context.writeConfig("channels.xalgoVoice.serverUrl", url);
+    await context.writeConfig("channels.museveVoice.enabled", true);
+    await context.writeConfig("channels.museveVoice.token", token.trim());
+    await context.writeConfig("channels.museveVoice.serverUrl", url);
     context.log("✓ 连接验证成功，配置已保存");
   } else {
     context.log(`✗ 连接失败: ${result.error}`);
-    context.log("请检查 Token 是否正确，或联系 Xalgo 支持。");
+    context.log("请检查 Token 是否正确，或联系 Museve 支持。");
   }
 }
 ```
@@ -2423,7 +2423,7 @@ export interface MockServerOptions {
   heartbeatIntervalMs?: number;
 }
 
-export class MockXalgoServer {
+export class MockMuseveServer {
   private wss: WebSocketServer | null = null;
   private clients: Set<WebSocket> = new Set();
   private token: string;
@@ -2489,7 +2489,7 @@ export class MockXalgoServer {
   sendInboundMessage(text: string, userId: string = "u123"): void {
     this.sendToAll(createEvent("inbound_message", {
       message_id: `msg_${Date.now()}`,
-      chat_id: `xalgo:user:${userId}`,
+      chat_id: `museve:user:${userId}`,
       chat_type: "direct",
       sender: { id: userId, name: "Test User" },
       text,
@@ -2512,7 +2512,7 @@ export class MockXalgoServer {
       if (payload.auth.token === this.token) {
         const connected: ConnectedPayload = {
           connection_id: `conn_${Date.now()}`,
-          user_id: "xalgo_user_test",
+          user_id: "museve_user_test",
           heartbeat_interval_ms: this.heartbeatIntervalMs,
           server_capabilities: ["asr_final", "tts_playback", "duplex_interrupt"],
         };
@@ -2535,15 +2535,15 @@ Create `test/integration/connect.test.ts`:
 
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
+import { MockMuseveServer } from "./mock-server.js";
 import { XvcClient } from "../../src/client.js";
 import { resolveConfig } from "../../src/config.js";
 
 describe("integration: connect", () => {
-  let server: MockXalgoServer;
+  let server: MockMuseveServer;
 
   beforeEach(async () => {
-    server = new MockXalgoServer({ token: "valid_token" });
+    server = new MockMuseveServer({ token: "valid_token" });
     await server.start();
   });
 
@@ -2593,15 +2593,15 @@ Create `test/integration/message-flow.test.ts`:
 
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
-import { XalgoVoiceChannel } from "../../src/channel.js";
+import { MockMuseveServer } from "./mock-server.js";
+import { MuseveVoiceChannel } from "../../src/channel.js";
 import type { InboundMessage } from "../../src/inbound.js";
 
 describe("integration: message flow", () => {
-  let server: MockXalgoServer;
+  let server: MockMuseveServer;
 
   beforeEach(async () => {
-    server = new MockXalgoServer({ token: "valid_token" });
+    server = new MockMuseveServer({ token: "valid_token" });
     await server.start();
   });
 
@@ -2609,10 +2609,10 @@ describe("integration: message flow", () => {
     await server.stop();
   });
 
-  it("receives inbound message from Xalgo", async () => {
+  it("receives inbound message from Museve", async () => {
     const messages: InboundMessage[] = [];
 
-    const channel = new XalgoVoiceChannel({
+    const channel = new MuseveVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
     });
@@ -2635,8 +2635,8 @@ describe("integration: message flow", () => {
     await channel.stop();
   });
 
-  it("sends outbound reply to Xalgo", async () => {
-    const channel = new XalgoVoiceChannel({
+  it("sends outbound reply to Museve", async () => {
+    const channel = new MuseveVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
       streaming: false,
@@ -2649,7 +2649,7 @@ describe("integration: message flow", () => {
 
     await new Promise((r) => setTimeout(r, 300));
 
-    channel.sendReply("你有三个待办", "msg_001", "xalgo:user:u123");
+    channel.sendReply("你有三个待办", "msg_001", "museve:user:u123");
 
     await new Promise((r) => setTimeout(r, 200));
 
@@ -2672,7 +2672,7 @@ Expected: All unit tests PASS. Integration tests PASS (mock server handles auth 
 
 ```bash
 git add test/integration/mock-server.ts test/integration/connect.test.ts test/integration/message-flow.test.ts
-git commit -m "feat: add integration tests with mock Xalgo Channel Server"
+git commit -m "feat: add integration tests with mock Museve Channel Server"
 ```
 
 ---
@@ -2742,7 +2742,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-@xalgo/voice-openclaw-plugin — OpenClaw Channel 插件，通过 Xalgo 眼镜语音控制 OpenClaw Agent。
+@museve/voice-openclaw-plugin — OpenClaw Channel 插件，通过 Museve 眼镜语音控制 OpenClaw Agent。
 
 ## 构建与运行
 

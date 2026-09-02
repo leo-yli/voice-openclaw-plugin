@@ -15,7 +15,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_001",
       text: "确认发送吗？",
       risk_level: "R2",
@@ -35,7 +35,7 @@ describe("ConfirmationManager", () => {
 
     mgr.addPending({
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_001",
       text: "确认发送吗？",
       risk_level: "R2",
@@ -45,7 +45,7 @@ describe("ConfirmationManager", () => {
 
     const response: ConfirmationResponsePayload = {
       confirmation_id: "conf_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       result: "confirmed",
       text: "确认",
       asr_confidence: 0.95,
@@ -65,7 +65,7 @@ describe("ConfirmationManager", () => {
     const expiresAt = Date.now() + 30000;
     mgr.addPending({
       confirmation_id: "conf_002",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_002",
       text: "确认？",
       risk_level: "R2",
@@ -85,7 +85,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_003",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_003",
       text: "删除所有数据？",
       risk_level: "R3",
@@ -102,7 +102,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     const request: ConfirmationRequestPayload = {
       confirmation_id: "conf_004",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_004",
       text: "删除所有数据？",
       risk_level: "R3",
@@ -118,7 +118,7 @@ describe("ConfirmationManager", () => {
     const mgr = new ConfirmationManager();
     mgr.addPending({
       confirmation_id: "conf_a",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_a",
       text: "a?",
       risk_level: "R1",
@@ -127,7 +127,7 @@ describe("ConfirmationManager", () => {
     });
     mgr.addPending({
       confirmation_id: "conf_b",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       reply_to: "msg_b",
       text: "b?",
       risk_level: "R2",

@@ -1,10 +1,10 @@
 import type { XvcEvent, InboundMessagePayload, VoiceUserTurnPayload, ConfirmationResponsePayload, VoiceInterruptPayload, VoiceCancelRequestPayload, DeliveryAckPayload, BindingRevokedPayload, TokenRotatedNotifyPayload, BindingMetadataUpdatedPayload, ServerAnnouncementPayload } from "./protocol.js";
 import {
-  missingXalgoBindingFields,
+  missingMuseveBindingFields,
   readNonEmptyString,
-  resolveXalgoAccount,
+  resolveMuseveAccount,
 } from "./account-config.js";
-import { type XalgoVoiceConfig, resolveConfig } from "./config.js";
+import { type MuseveVoiceConfig, resolveConfig } from "./config.js";
 import { XvcClient, type ConnectionStatus } from "./client.js";
 import { describeInboundPayloadShape, parseInboundMessage, type InboundMessage } from "./inbound.js";
 import { formatOutboundMessage } from "./outbound.js";
@@ -41,7 +41,7 @@ function describeRuntimeConfig(config: Record<string, unknown>): string {
   const serverUrl = readNonEmptyString(config, "serverUrl") || "(missing)";
   const instanceId = readNonEmptyString(config, "instanceId");
   const token = readNonEmptyString(config, "token");
-  const missing = missingXalgoBindingFields(config);
+  const missing = missingMuseveBindingFields(config);
   return [
     `serverUrl=${serverUrl}`,
     `token=${token ? "set" : "missing"}`,
@@ -59,8 +59,8 @@ export interface ChannelCallbacks {
   handleCancelRequest?: (request: VoiceCancelRequest, event: XvcEvent<VoiceCancelRequestPayload>) => void;
 }
 
-export class XalgoVoiceChannel {
-  private config: XalgoVoiceConfig;
+export class MuseveVoiceChannel {
+  private config: MuseveVoiceConfig;
   private client: XvcClient;
   private streaming: StreamingManager;
   private confirmation: ConfirmationManager;
@@ -72,7 +72,7 @@ export class XalgoVoiceChannel {
   private controlEvents: ControlEventHandler;
 
   constructor(
-    rawConfig: Partial<XalgoVoiceConfig> & { token: string },
+    rawConfig: Partial<MuseveVoiceConfig> & { token: string },
     bindingStore: BindingStore
   ) {
     this.config = resolveConfig(rawConfig);
@@ -253,7 +253,7 @@ export class XalgoVoiceChannel {
 }
 
 export function createInboundAdapter() {
-  let channel: XalgoVoiceChannel | null = null;
+  let channel: MuseveVoiceChannel | null = null;
 
   return {
     async start({ config, account, handleMessage, handleEvent, handleStatus, handleInterrupt, handleCancelRequest, handleTransportActivity, readConfig, writeConfig }: {
@@ -268,10 +268,10 @@ export function createInboundAdapter() {
       readConfig?: (key: string) => Promise<unknown>;
       writeConfig?: (key: string, value: unknown) => Promise<void>;
     }) {
-      const xalgoConfig = resolveXalgoAccount({ ...config, channelAccounts: config.channelAccounts }, account?.accountId);
-      Object.assign(xalgoConfig, account ?? {});
+      const museveConfig = resolveMuseveAccount({ ...config, channelAccounts: config.channelAccounts }, account?.accountId);
+      Object.assign(museveConfig, account ?? {});
       const adapter: StoreAdapter = {
-        read: readConfig ?? (async (k) => xalgoConfig[k.split(".").pop()!]),
+        read: readConfig ?? (async (k) => museveConfig[k.split(".").pop()!]),
         write: writeConfig ?? (async () => {
           log.warn("writeConfig not provided, binding updates will not persist");
         }),
@@ -279,13 +279,13 @@ export function createInboundAdapter() {
       const store = createBindingStore(adapter);
       const binding = await store.read();
       if (!binding) {
-        log.warn(`Channel start skipped: incomplete binding ${describeRuntimeConfig(xalgoConfig)}`);
+        log.warn(`Channel start skipped: incomplete binding ${describeRuntimeConfig(museveConfig)}`);
         handleStatus({ status: "unbound" });
         return;
       }
 
-      log.info(`Channel start requested: ${describeRuntimeConfig(xalgoConfig)}`);
-      channel = new XalgoVoiceChannel(xalgoConfig as Partial<XalgoVoiceConfig> & { token: string }, store);
+      log.info(`Channel start requested: ${describeRuntimeConfig(museveConfig)}`);
+      channel = new MuseveVoiceChannel(museveConfig as Partial<MuseveVoiceConfig> & { token: string }, store);
       await channel.start({ handleMessage, handleStatus, handleTransportActivity, handleEvent, handleInterrupt, handleCancelRequest });
     },
 
@@ -543,20 +543,20 @@ async function dispatchGatewayInboundMessage(ctx: {
     NativeChannelId: message.conversationId,
     SenderName: message.sender.name,
     SenderId: message.sender.id,
-    Provider: "xalgo_voice",
-    Surface: "xalgo_voice",
+    Provider: "museve_voice",
+    Surface: "museve_voice",
     MessageSid: message.id,
     MessageSidFull: message.id,
     ReplyToId: message.id,
     Timestamp: message.timestamp,
-    OriginatingChannel: "xalgo_voice",
+    OriginatingChannel: "museve_voice",
     OriginatingTo: message.conversationId,
     CommandAuthorized: true,
   });
 
   log.info(`Dispatching inbound to OpenClaw: msg=${message.id} agent=${agentId} session=${ctxPayload.SessionKey}`);
   await runPrepared({
-    channel: "xalgo_voice",
+    channel: "museve_voice",
     accountId: ctx.accountId,
     routeSessionKey: ctxPayload.SessionKey,
     storePath,
@@ -608,7 +608,7 @@ async function invokeGatewayRuntimeCancel(ctx: {
   const turn = channelRuntime?.turn;
   const tasks = channelRuntime?.tasks ?? channelRuntime?.task;
   const payload = {
-    channel: "xalgo_voice",
+    channel: "museve_voice",
     accountId: ctx.accountId,
     sessionId: request.sessionId,
     agentBindingId: request.agentBindingId,
@@ -650,7 +650,7 @@ export const outbound = {
   listAccountIds: () => ["default"],
 
   resolveAccount: (config: any, accountId?: string) => {
-    return resolveXalgoAccount(config, accountId);
+    return resolveMuseveAccount(config, accountId);
   },
 
   async sendText({ account, config, text, context }: {

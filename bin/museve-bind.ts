@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 /**
- * Xalgo Voice 绑定向导 CLI。
+ * Museve Voice 绑定向导 CLI。
  *
  * 用户在 OpenClaw 主机上运行：
  *
- *   xalgo-bind                    # 如果走 npm install bin 注册
+ *   museve-bind                    # 如果走 npm install bin 注册
  *   # 或绝对路径
- *   node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+ *   node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js
  *
  * 流程：
  *   1. 读 ~/.openclaw/openclaw.json
  *   2. 如果已绑定，问操作：保持 / 重新绑定 / 解绑
  *   3. 否则 prompt 8 位绑定码 → API 地址 → 调 exchange → 二次确认
- *   4. 写入 channels.xalgo_voice.* 路径
+ *   4. 写入 channels.museve_voice.* 路径
  *   5. 提示重启 OpenClaw
  *
  * 配置存储路径采用 `channels.<channel_id>.*` —— 与 binding-store.ts 的 KEYS
@@ -31,7 +31,7 @@ import { createRestClient, ExchangeError } from "../src/rest-client.js";
 import { DEFAULT_CONFIG } from "../src/config.js";
 
 const PLUGIN_VERSION = "2026.5.16";
-const CHANNEL_KEY = "xalgo_voice";
+const CHANNEL_KEY = "museve_voice";
 const CODE_REGEX = /^[A-Z0-9]{8}$/i;
 const CONFIG_PATH = join(homedir(), ".openclaw", "openclaw.json");
 
@@ -80,7 +80,7 @@ function ensureChannelConfig(cfg: OpenClawConfig): ChannelConfig {
 async function main(): Promise<void> {
   console.log("");
   console.log("╭─────────────────────────────────╮");
-  console.log("│   Xalgo Voice 绑定向导          │");
+  console.log("│   Museve Voice 绑定向导          │");
   console.log("╰─────────────────────────────────╯");
   console.log("");
 
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
 
     // 2. prompt 绑定码
     console.log("");
-    console.log("请在 Xalgo App 点击「连接 OpenClaw」获取 8 位绑定码。");
+    console.log("请在 Museve App 点击「连接 OpenClaw」获取 8 位绑定码。");
     const code = (await ask("请输入绑定码:")).trim().toUpperCase();
     if (!code) {
       console.log("已取消。");

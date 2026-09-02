@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { xalgoVoiceSetupWizard } from "../../src/onboarding.js";
+import { museveVoiceSetupWizard } from "../../src/onboarding.js";
 
 function makeCfg(channel: Record<string, unknown>) {
   return {
     channels: {
-      xalgo_voice: channel,
+      museve_voice: channel,
     },
   };
 }
@@ -12,12 +12,12 @@ function makeCfg(channel: Record<string, unknown>) {
 function makeAccountCfg(account: Record<string, unknown>) {
   return {
     channelAccounts: {
-      xalgo_voice: account,
+      museve_voice: account,
     },
   };
 }
 
-describe("xalgoVoiceSetupWizard configured state", () => {
+describe("museveVoiceSetupWizard configured state", () => {
   it("treats a complete enabled binding as configured", () => {
     const cfg = makeCfg({
       enabled: true,
@@ -29,9 +29,9 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
-    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
-    expect(xalgoVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(false);
   });
 
   it("treats a disabled binding as not configured", () => {
@@ -45,7 +45,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
   });
 
   it("treats partial binding data as not configured", () => {
@@ -57,9 +57,9 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
-    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(false);
-    expect(xalgoVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(false);
+    expect(museveVoiceSetupWizard.introNote.shouldShow({ cfg })).toBe(true);
   });
 
   it("credential inspect reports configured only for complete binding", () => {
@@ -73,7 +73,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    const inspected = xalgoVoiceSetupWizard.credentials[0].inspect({ cfg });
+    const inspected = museveVoiceSetupWizard.credentials[0].inspect({ cfg });
 
     expect(inspected).toEqual({
       accountConfigured: true,
@@ -90,7 +90,7 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       serverUrl: "wss://asr-test.jlpay.com/agent-channel/connect",
     });
 
-    const lines = xalgoVoiceSetupWizard.status.resolveStatusLines({
+    const lines = museveVoiceSetupWizard.status.resolveStatusLines({
       cfg,
       configured: false,
     });
@@ -112,8 +112,8 @@ describe("xalgoVoiceSetupWizard configured state", () => {
       apiBaseUrl: "https://asr-test.jlpay.com/api/v1/agent-channel",
     });
 
-    expect(xalgoVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
-    expect(xalgoVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.status.resolveConfigured({ cfg })).toBe(true);
+    expect(museveVoiceSetupWizard.completionNote.shouldShow({ cfg })).toBe(true);
   });
 
   it("accepts app-generated binding codes containing U", async () => {
@@ -133,18 +133,18 @@ describe("xalgoVoiceSetupWizard configured state", () => {
     );
     const cfg = makeCfg({ _pendingCode: "6UM73YKK" });
 
-    await expect(xalgoVoiceSetupWizard.finalize({ cfg })).resolves.toBeDefined();
-    expect(cfg.channels.xalgo_voice.token).toBe("xvc_live_xyz");
+    await expect(museveVoiceSetupWizard.finalize({ cfg })).resolves.toBeDefined();
+    expect(cfg.channels.museve_voice.token).toBe("xvc_live_xyz");
     vi.unstubAllGlobals();
   });
 
   it("writes pending code to channel config only", () => {
     const cfg = makeCfg({});
 
-    xalgoVoiceSetupWizard.credentials[0].applySet({ cfg, resolvedValue: "abcd3456" });
+    museveVoiceSetupWizard.credentials[0].applySet({ cfg, resolvedValue: "abcd3456" });
 
-    expect(cfg.channels.xalgo_voice._pendingCode).toBe("ABCD3456");
-    expect(cfg.channels.xalgo_voice.accountId).toBeUndefined();
+    expect(cfg.channels.museve_voice._pendingCode).toBe("ABCD3456");
+    expect(cfg.channels.museve_voice.accountId).toBeUndefined();
     expect((cfg as any).channelAccounts).toBeUndefined();
   });
 });

@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
-import { XalgoVoiceChannel } from "../../src/channel.js";
+import { MockMuseveServer } from "./mock-server.js";
+import { MuseveVoiceChannel } from "../../src/channel.js";
 import { createBindingStore } from "../../src/binding-store.js";
 
 describe("Integration: binding lifecycle", () => {
-  let mock: MockXalgoServer;
+  let mock: MockMuseveServer;
   let port: number;
 
   beforeEach(async () => {
-    mock = new MockXalgoServer({ heartbeatIntervalMs: 5000 });
+    mock = new MockMuseveServer({ heartbeatIntervalMs: 5000 });
     port = await mock.start();
   });
 
@@ -18,11 +18,11 @@ describe("Integration: binding lifecycle", () => {
 
   it("happy path: connect with stored binding → exchange messages → server revokes → channel emits unbound status", async () => {
     const memoryConfig: Record<string, unknown> = {
-      "channels.xalgo_voice.token": "test_token",
-      "channels.xalgo_voice.instanceId": "oc_test_inst",
-      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgo_voice.boundUserId": "u_1",
-      "channels.xalgo_voice.boundUserName": "杨立",
+      "channels.museve_voice.token": "test_token",
+      "channels.museve_voice.instanceId": "oc_test_inst",
+      "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museve_voice.boundUserId": "u_1",
+      "channels.museve_voice.boundUserName": "杨立",
     };
     const store = createBindingStore({
       read: async (k) => memoryConfig[k],
@@ -34,7 +34,7 @@ describe("Integration: binding lifecycle", () => {
     const statusUpdates: string[] = [];
     const messages: unknown[] = [];
 
-    const channel = new XalgoVoiceChannel(
+    const channel = new MuseveVoiceChannel(
       {
         token: "test_token",
         serverUrl: `ws://localhost:${port}`,
@@ -61,8 +61,8 @@ describe("Integration: binding lifecycle", () => {
     await new Promise((r) => setTimeout(r, 300));
 
     // 验证本地清空 + 状态切到 unbound
-    expect(memoryConfig["channels.xalgo_voice.token"]).toBe("");
-    expect(memoryConfig["channels.xalgo_voice.instanceId"]).toBe("");
+    expect(memoryConfig["channels.museve_voice.token"]).toBe("");
+    expect(memoryConfig["channels.museve_voice.instanceId"]).toBe("");
     expect(statusUpdates).toContain("unbound");
 
     await channel.stop();
@@ -83,10 +83,10 @@ describe("Integration: binding lifecycle", () => {
       // 使用与 mock server 默认匹配的 token（"test_token"），
       // 确保 WebSocket 认证成功，之后再收 token_rotated_notify
       const memoryConfig: Record<string, unknown> = {
-        "channels.xalgo_voice.token": "test_token",
-        "channels.xalgo_voice.instanceId": "oc_test_inst",
-        "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-        "channels.xalgo_voice.boundUserId": "u_1",
+        "channels.museve_voice.token": "test_token",
+        "channels.museve_voice.instanceId": "oc_test_inst",
+        "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+        "channels.museve_voice.boundUserId": "u_1",
       };
       const store = createBindingStore({
         read: async (k) => memoryConfig[k],
@@ -95,7 +95,7 @@ describe("Integration: binding lifecycle", () => {
         },
       });
 
-      const channel = new XalgoVoiceChannel(
+      const channel = new MuseveVoiceChannel(
         {
           token: "test_token",
           serverUrl: `ws://localhost:${port}`,
@@ -110,7 +110,7 @@ describe("Integration: binding lifecycle", () => {
       mock.pushTokenRotatedNotify("b_1");
       await new Promise((r) => setTimeout(r, 300));
 
-      expect(memoryConfig["channels.xalgo_voice.token"]).toBe("new_token_after_rotate");
+      expect(memoryConfig["channels.museve_voice.token"]).toBe("new_token_after_rotate");
       expect(fetchMock).toHaveBeenCalledOnce();
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toContain("/api/v1/agent-channel/bindings/rotate");

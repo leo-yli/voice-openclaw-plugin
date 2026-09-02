@@ -5,10 +5,10 @@ import { createBindingStore } from "../../src/binding-store.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgo_voice.token": "t",
-    "channels.xalgo_voice.instanceId": "oc_test",
-    "channels.xalgo_voice.boundAt": "ts",
-    "channels.xalgo_voice.boundUserId": "u_1",
+    "channels.museve_voice.token": "t",
+    "channels.museve_voice.instanceId": "oc_test",
+    "channels.museve_voice.boundAt": "ts",
+    "channels.museve_voice.boundUserId": "u_1",
   };
   return { store: createBindingStore({ read: async (k) => data[k], write: async (k, v) => { data[k] = v; } }), data };
 }

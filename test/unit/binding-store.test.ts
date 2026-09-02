@@ -69,7 +69,7 @@ describe("BindingStore", () => {
   });
 
   it("partial data (missing required fields) is treated as unbound", async () => {
-    adapter.storage["channels.xalgo_voice.token"] = "t";
+    adapter.storage["channels.museve_voice.token"] = "t";
     // 缺 instanceId
     const store = createBindingStore(adapter);
     expect(await store.read()).toBeNull();

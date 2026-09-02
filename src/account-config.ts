@@ -1,9 +1,9 @@
-const CHANNEL_ID = "xalgo_voice";
+const CHANNEL_ID = "museve_voice";
 const DEFAULT_ACCOUNT_ID = "default";
 
-export type XalgoAccountConfig = Record<string, unknown>;
+export type MuseveAccountConfig = Record<string, unknown>;
 
-export const REQUIRED_XALGO_BINDING_FIELDS = [
+export const REQUIRED_MUSEVE_BINDING_FIELDS = [
   "token",
   "instanceId",
   "boundAt",
@@ -12,41 +12,41 @@ export const REQUIRED_XALGO_BINDING_FIELDS = [
   "apiBaseUrl",
 ] as const;
 
-function objectValue(value: unknown): XalgoAccountConfig {
+function objectValue(value: unknown): MuseveAccountConfig {
   return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as XalgoAccountConfig)
+    ? (value as MuseveAccountConfig)
     : {};
 }
 
-function resolveChannelAccountsRoot(cfg: any): XalgoAccountConfig {
+function resolveChannelAccountsRoot(cfg: any): MuseveAccountConfig {
   return objectValue(cfg?.channelAccounts?.[CHANNEL_ID]);
 }
 
-function resolveChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): XalgoAccountConfig {
+function resolveChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): MuseveAccountConfig {
   const root = resolveChannelAccountsRoot(cfg);
   const nested = objectValue(root[accountId]);
   return Object.keys(nested).length > 0 ? nested : root;
 }
 
-function looksLikeXalgoAccount(config: XalgoAccountConfig): boolean {
-  return ["enabled", ...REQUIRED_XALGO_BINDING_FIELDS].some((key) => key in config);
+function looksLikeMuseveAccount(config: MuseveAccountConfig): boolean {
+  return ["enabled", ...REQUIRED_MUSEVE_BINDING_FIELDS].some((key) => key in config);
 }
 
-export function ensureXalgoChannel(cfg: any): XalgoAccountConfig {
+export function ensureMuseveChannel(cfg: any): MuseveAccountConfig {
   cfg.channels ??= {};
   cfg.channels[CHANNEL_ID] ??= {};
   return cfg.channels[CHANNEL_ID];
 }
 
-export function ensureXalgoChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): XalgoAccountConfig {
+export function ensureMuseveChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): MuseveAccountConfig {
   cfg.channelAccounts ??= {};
   cfg.channelAccounts[CHANNEL_ID] ??= {};
   const root = cfg.channelAccounts[CHANNEL_ID];
 
   if (root && typeof root === "object" && !Array.isArray(root)) {
-    const record = root as XalgoAccountConfig;
+    const record = root as MuseveAccountConfig;
     if (record[accountId] && typeof record[accountId] === "object" && !Array.isArray(record[accountId])) {
-      return record[accountId] as XalgoAccountConfig;
+      return record[accountId] as MuseveAccountConfig;
     }
     return record;
   }
@@ -55,36 +55,36 @@ export function ensureXalgoChannelAccount(cfg: any, accountId = DEFAULT_ACCOUNT_
   return cfg.channelAccounts[CHANNEL_ID];
 }
 
-export function resolveXalgoAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): XalgoAccountConfig {
+export function resolveMuseveAccount(cfg: any, accountId = DEFAULT_ACCOUNT_ID): MuseveAccountConfig {
   const direct = objectValue(cfg);
   return {
     accountId,
-    ...(looksLikeXalgoAccount(direct) ? direct : {}),
+    ...(looksLikeMuseveAccount(direct) ? direct : {}),
     ...objectValue(cfg?.channels?.[CHANNEL_ID]),
     ...resolveChannelAccount(cfg, accountId),
   };
 }
 
-export function setXalgoAccount(cfg: any, patch: XalgoAccountConfig, accountId = DEFAULT_ACCOUNT_ID): any {
-  const channel = ensureXalgoChannel(cfg);
+export function setMuseveAccount(cfg: any, patch: MuseveAccountConfig, accountId = DEFAULT_ACCOUNT_ID): any {
+  const channel = ensureMuseveChannel(cfg);
   Object.assign(channel, patch);
   if (patch._pendingCode === "") delete channel._pendingCode;
   return cfg;
 }
 
-export function readNonEmptyString(config: XalgoAccountConfig, key: string): string {
+export function readNonEmptyString(config: MuseveAccountConfig, key: string): string {
   const value = config[key];
   return typeof value === "string" ? value.trim() : "";
 }
 
-export function missingXalgoBindingFields(config: XalgoAccountConfig): string[] {
-  const missing: string[] = REQUIRED_XALGO_BINDING_FIELDS.filter(
+export function missingMuseveBindingFields(config: MuseveAccountConfig): string[] {
+  const missing: string[] = REQUIRED_MUSEVE_BINDING_FIELDS.filter(
     (field) => !readNonEmptyString(config, field),
   );
   if (config.enabled !== true) missing.unshift("enabled");
   return missing;
 }
 
-export function hasCompleteXalgoBinding(config: XalgoAccountConfig): boolean {
-  return missingXalgoBindingFields(config).length === 0;
+export function hasCompleteMuseveBinding(config: MuseveAccountConfig): boolean {
+  return missingMuseveBindingFields(config).length === 0;
 }

@@ -2,15 +2,15 @@
 /**
  * Post-build hook:
  *
- * 1. 给编译产物 dist/bin/xalgo-bind.js 顶部加 #!/usr/bin/env node shebang
+ * 1. 给编译产物 dist/bin/museve-bind.js 顶部加 #!/usr/bin/env node shebang
  *    （TypeScript 编译时不总是保留 shebang，自己保险一手）
- * 2. chmod 755 让它可执行（Unix 主机直接 xalgo-bind 调起）
+ * 2. chmod 755 让它可执行（Unix 主机直接 museve-bind 调起）
  */
 
 import { readFileSync, writeFileSync, chmodSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const targets = ["dist/bin/xalgo-bind.js"];
+const targets = ["dist/bin/museve-bind.js"];
 
 for (const target of targets) {
   const path = join(process.cwd(), target);

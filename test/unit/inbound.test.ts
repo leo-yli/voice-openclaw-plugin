@@ -16,7 +16,7 @@ describe("inbound", () => {
       message_id: "msg_001",
       session_id: "voice_session_001",
       agent_binding_id: "agent_binding_001",
-      chat_id: "xalgo:user:u123",
+      chat_id: "museve:user:u123",
       chat_type: "direct",
       sender: { id: "u123", name: "杨立" },
       text: "帮我看看今天有什么待办",
@@ -39,7 +39,7 @@ describe("inbound", () => {
     expect(result!.text).toBe("帮我看看今天有什么待办");
     expect(result!.sender.id).toBe("u123");
     expect(result!.sender.name).toBe("杨立");
-    expect(result!.conversationId).toBe("xalgo:user:u123");
+    expect(result!.conversationId).toBe("museve:user:u123");
     expect(result!.conversationType).toBe("direct");
     expect(result!.timestamp).toBe(1718000000000);
     expect(result!.raw).toBe(event.payload);
@@ -48,7 +48,7 @@ describe("inbound", () => {
   it("handles missing optional metadata fields", () => {
     const event = makeEvent({
       message_id: "msg_002",
-      chat_id: "xalgo:user:u456",
+      chat_id: "museve:user:u456",
       chat_type: "direct",
       sender: { id: "u456", name: "Test" },
       text: "hello",
@@ -63,7 +63,7 @@ describe("inbound", () => {
   it("accepts common ASR transcript field names", () => {
     const event = makeEvent({
       message_id: "msg_004",
-      chat_id: "xalgo:user:u456",
+      chat_id: "museve:user:u456",
       chat_type: "direct",
       sender: { id: "u456", name: "Test" },
       text: "",
@@ -79,7 +79,7 @@ describe("inbound", () => {
   it("accepts nested ASR result text", () => {
     const event = makeEvent({
       message_id: "msg_005",
-      chat_id: "xalgo:user:u456",
+      chat_id: "museve:user:u456",
       chat_type: "direct",
       sender: { id: "u456", name: "Test" },
       text: "",
@@ -120,7 +120,7 @@ describe("inbound", () => {
   it("returns null for empty text", () => {
     const event = makeEvent({
       message_id: "msg_003",
-      chat_id: "xalgo:user:u789",
+      chat_id: "museve:user:u789",
       chat_type: "direct",
       sender: { id: "u789", name: "Test" },
       text: "",

@@ -1,26 +1,26 @@
-# @xalgo/voice-openclaw-plugin
+# @museve/voice-openclaw-plugin
 
-Xalgo Voice Channel 插件，让用户通过 Xalgo 眼镜语音实时控制自己的 OpenClaw Agent。
+Museve Voice Channel 插件，让用户通过 Museve 眼镜语音实时控制自己的 OpenClaw Agent。
 
 中文 | [English](./README.en.md)
 
 ---
 
-@xalgo/voice-openclaw-plugin 是一个 OpenClaw Channel 插件，让用户通过 Xalgo 眼镜语音实时控制自己的 OpenClaw Agent。插件作为 WebSocket 客户端主动连接 Xalgo Voice Channel Server，不需要 OpenClaw 暴露公网端口。
+@museve/voice-openclaw-plugin 是一个 OpenClaw Channel 插件，让用户通过 Museve 眼镜语音实时控制自己的 OpenClaw Agent。插件作为 WebSocket 客户端主动连接 Museve Voice Channel Server，不需要 OpenClaw 暴露公网端口。
 
 ## 工作原理
 
 ```text
-Xalgo Glasses -> Pupa Cloud (ASR/TTS) -> Xalgo Voice Channel Server
+Museve Glasses -> Pupa Cloud (ASR/TTS) -> Museve Voice Channel Server
                                                 ^ v WebSocket
                                           voice-openclaw-plugin
                                                 |
                                           OpenClaw Agent
 ```
 
-- 插件作为 WebSocket 客户端主动连接 Xalgo Channel Server。
+- 插件作为 WebSocket 客户端主动连接 Museve Channel Server。
 - OpenClaw 无需暴露公网端口，适用于内网部署。
-- 语音识别 (ASR) 和语音合成 (TTS) 由 Xalgo Pupa Cloud 处理，插件只负责协议转换和消息转发。
+- 语音识别 (ASR) 和语音合成 (TTS) 由 Museve Pupa Cloud 处理，插件只负责协议转换和消息转发。
 
 ## 快速开始
 
@@ -38,7 +38,7 @@ Xalgo Glasses -> Pupa Cloud (ASR/TTS) -> Xalgo Voice Channel Server
 #### 方式 A：从 npm 安装
 
 ```bash
-openclaw plugins install @xalgo/voice-openclaw-plugin
+openclaw plugins install @museve/voice-openclaw-plugin
 ```
 
 如果 npm 包尚未发布，请先使用方式 B。从发布包安装后，后续绑定和运行命令保持一致。
@@ -66,10 +66,10 @@ openclaw plugins install .
 cd voice-openclaw-plugin
 npm install
 npm pack
-# 生成 xalgo-voice-openclaw-plugin-2026.5.16.tgz
+# 生成 museve-voice-openclaw-plugin-2026.5.16.tgz
 
 # OpenClaw 主机上：
-openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
+openclaw plugins install /path/to/museve-voice-openclaw-plugin-2026.5.16.tgz
 ```
 
 #### 方式 D：离线复制到 extensions 目录
@@ -87,11 +87,11 @@ tar czf plugin.tar.gz dist node_modules endpoints.json openclaw.plugin.json pack
 # 推到 OpenClaw 主机并解压：
 scp plugin.tar.gz root@<host>:/tmp/
 ssh root@<host>
-mkdir -p ~/.openclaw/extensions/xalgo_voice
-tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
+mkdir -p ~/.openclaw/extensions/museve_voice
+tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/museve_voice
 ```
 
-这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`。需要手动在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 中加入 `xalgo_voice` 才能被信任执行。
+这种方式 OpenClaw 会标记为 `loaded without install/load-path provenance`。需要手动在 `~/.openclaw/openclaw.json` 的 `plugins.allow` 中加入 `museve_voice` 才能被信任执行。
 
 ### 2. 运行 channel 配置向导
 
@@ -99,9 +99,9 @@ tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
 openclaw channels add
 ```
 
-在向导中选择 `Xalgo Voice (语音)`，按提示输入 Xalgo App 给出的 8 位绑定码。向导会自动调用 exchange 接口换取长期 Channel Token，并写入 OpenClaw 配置。
+在向导中选择 `Museve Voice (语音)`，按提示输入 Museve App 给出的 8 位绑定码。向导会自动调用 exchange 接口换取长期 Channel Token，并写入 OpenClaw 配置。
 
-绑定码获取方式：打开 Xalgo App，点击「连接 OpenClaw」，App 会显示一个 8 位绑定码，5 分钟内有效。
+绑定码获取方式：打开 Museve App，点击「连接 OpenClaw」，App 会显示一个 8 位绑定码，5 分钟内有效。
 
 ### 3. 重启 OpenClaw
 
@@ -113,25 +113,25 @@ openclaw gateway restart
 启动日志中应该看到类似输出：
 
 ```text
-[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] WebSocket connected
-[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
+[plugins] [@museve/voice-openclaw-plugin 2026.5.16] WebSocket connected
+[plugins] [@museve/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
 ```
 
 也可以用下面的命令验证插件已加载：
 
 ```bash
-openclaw plugins list | grep xalgo
-openclaw plugins inspect xalgo_voice
+openclaw plugins list | grep museve
+openclaw plugins inspect museve_voice
 ```
 
-看到 `xalgo_voice` channel 后，即可通过 Xalgo 眼镜语音触发 OpenClaw Agent。
+看到 `museve_voice` channel 后，即可通过 Museve 眼镜语音触发 OpenClaw Agent。
 
 ## 升级
 
 ### npm 安装方式
 
 ```bash
-openclaw plugins update @xalgo/voice-openclaw-plugin
+openclaw plugins update @museve/voice-openclaw-plugin
 openclaw gateway restart
 ```
 
@@ -144,58 +144,58 @@ cd ~/voice-openclaw-plugin
 git pull
 npm install
 npm run build
-openclaw plugins uninstall xalgo_voice
-rm -rf ~/.openclaw/extensions/xalgo_voice
+openclaw plugins uninstall museve_voice
+rm -rf ~/.openclaw/extensions/museve_voice
 openclaw plugins install .
 openclaw channels add
 openclaw gateway restart
 ```
 
-不要在 `openclaw plugins uninstall xalgo_voice` 之前直接删除 `~/.openclaw/extensions/xalgo_voice`。直接删除扩展目录会留下 stale config，可能导致 OpenClaw 报 `unknown channel id` 或 `plugin not found`。如果 install 提示 `plugin already exists`，先执行官方 uninstall，再删除残留目录并重新 install。
+不要在 `openclaw plugins uninstall museve_voice` 之前直接删除 `~/.openclaw/extensions/museve_voice`。直接删除扩展目录会留下 stale config，可能导致 OpenClaw 报 `unknown channel id` 或 `plugin not found`。如果 install 提示 `plugin already exists`，先执行官方 uninstall，再删除残留目录并重新 install。
 
 ## 重新绑定、解绑、切换账号
 
-绑定后如果想更换 Xalgo 账号，或者怀疑 token 泄漏需要 rotate，可以使用以下方式。
+绑定后如果想更换 Museve 账号，或者怀疑 token 泄漏需要 rotate，可以使用以下方式。
 
 ### 方式 A：重新运行 `openclaw channels add`
 
 向导会检测到已有绑定，并提示保持、重新绑定或解绑。
 
-### 方式 B：使用独立 CLI `xalgo-bind`
+### 方式 B：使用独立 CLI `museve-bind`
 
 如果 OpenClaw 版本不支持 `channels add`，或者需要脚本化操作：
 
 ```bash
-node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js
 ```
 
 可选地在 shell 配置中添加 alias：
 
 ```bash
-alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js'
+alias museve-bind='node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js'
 ```
 
-之后可以用 `xalgo-bind` 执行绑定或解绑。
+之后可以用 `museve-bind` 执行绑定或解绑。
 
-### 方式 C：在 Xalgo App 端解绑
+### 方式 C：在 Museve App 端解绑
 
-在 Xalgo App 的设备列表中点击对应 OpenClaw，然后移除或 rotate token。App 操作后，服务端会通过 WebSocket 推送 `binding_revoked` 或 `token_rotated_notify`，插件会自动清空或更换本地凭据。
+在 Museve App 的设备列表中点击对应 OpenClaw，然后移除或 rotate token。App 操作后，服务端会通过 WebSocket 推送 `binding_revoked` 或 `token_rotated_notify`，插件会自动清空或更换本地凭据。
 
 ## 手动配置
 
-绑定向导写入的字段位于 `~/.openclaw/openclaw.json` 的 `channels.xalgo_voice.*` 下。通常不需要手动修改。如果需要切换 API 端点或调试，可以参考下面的 schema：
+绑定向导写入的字段位于 `~/.openclaw/openclaw.json` 的 `channels.museve_voice.*` 下。通常不需要手动修改。如果需要切换 API 端点或调试，可以参考下面的 schema：
 
 ```json
 {
   "channels": {
-    "xalgo_voice": {
+    "museve_voice": {
       "enabled": true,
       "serverUrl": "wss://asr-test.jlpay.com/agent-channel/connect",
       "apiBaseUrl": "https://asr-test.jlpay.com/api/v1/agent-channel",
       "token": "<绑定向导自动写入>",
       "instanceId": "<绑定向导自动写入>",
       "agentId": "voice",
-      "sessionPrefix": "xalgo_voice",
+      "sessionPrefix": "museve_voice",
       "streaming": true,
       "replyMode": "voice_first",
       "riskPolicy": {
@@ -213,7 +213,7 @@ alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
 }
 ```
 
-默认 `serverUrl` 和 `apiBaseUrl` 来自项目根目录的 `endpoints.json`。开发者切换测试或生产环境时，只需要改这个文件。终端用户不要修改 `node_modules` 里的 `endpoints.json`，请通过 OpenClaw 配置覆盖 `channels.xalgo_voice.serverUrl` 或 `channels.xalgo_voice.apiBaseUrl`。
+默认 `serverUrl` 和 `apiBaseUrl` 来自项目根目录的 `endpoints.json`。开发者切换测试或生产环境时，只需要改这个文件。终端用户不要修改 `node_modules` 里的 `endpoints.json`，请通过 OpenClaw 配置覆盖 `channels.museve_voice.serverUrl` 或 `channels.museve_voice.apiBaseUrl`。
 
 ### 配置项
 
@@ -222,12 +222,12 @@ alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
 | `enabled` | boolean | `false` | 是否启用插件，绑定向导成功后自动设为 `true` |
 | `serverUrl` | string | `wss://asr-test.jlpay.com/agent-channel/connect` | WebSocket Channel Server 地址 |
 | `apiBaseUrl` | string | `https://asr-test.jlpay.com/api/v1/agent-channel` | REST API base，用于 exchange、rotate、unbind |
-| `token` | string | 绑定向导自动写入 | Xalgo Channel Token，请勿手动修改 |
+| `token` | string | 绑定向导自动写入 | Museve Channel Token，请勿手动修改 |
 | `instanceId` | string | 绑定向导自动生成 UUID v4 | 插件实例 ID，作为设备指纹参与鉴权 |
 | `boundUserId` / `boundUserName` / `boundAt` | string | 绑定向导自动写入 | 仅供展示 |
-| `deviceLabel` | string | `OpenClaw on <hostname>` | Xalgo App 侧显示的设备标签 |
+| `deviceLabel` | string | `OpenClaw on <hostname>` | Museve App 侧显示的设备标签 |
 | `agentId` | string | `voice` | OpenClaw Agent ID |
-| `sessionPrefix` | string | `xalgo_voice` | Session ID 前缀 |
+| `sessionPrefix` | string | `museve_voice` | Session ID 前缀 |
 | `streaming` | boolean | `true` | 是否启用流式回复 |
 | `replyMode` | string | `voice_first` | 回复模式：`voice_first` / `text_first` / `both` |
 | `riskPolicy.confirmExternalSend` | boolean | `true` | 外发消息是否需要确认 |
@@ -241,7 +241,7 @@ alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
 
 ### 基本语音交互
 
-1. 用户对 Xalgo 眼镜说话。
+1. 用户对 Museve 眼镜说话。
 2. Pupa Cloud 完成语音识别，并把文本发送到 Channel Server。
 3. 插件收到消息并转发给 OpenClaw Agent。
 4. Agent 处理后回复文本。
@@ -289,8 +289,8 @@ src/
 ├── client.ts         # WebSocket 客户端
 ├── config.ts         # 配置类型与默认值
 ├── protocol.ts       # XVC 协议事件类型定义
-├── inbound.ts        # 入站消息解析 (Xalgo -> OpenClaw)
-├── outbound.ts       # 出站消息格式化 (OpenClaw -> Xalgo)
+├── inbound.ts        # 入站消息解析 (Museve -> OpenClaw)
+├── outbound.ts       # 出站消息格式化 (OpenClaw -> Museve)
 ├── streaming.ts      # 流式回复管理
 ├── confirmation.ts   # 确认状态机
 ├── interrupt.ts      # 语音打断处理
@@ -302,7 +302,7 @@ src/
 
 ## 安全
 
-- 插件不保存 OpenClaw Gateway Token，只保存 Xalgo Channel Token。
+- 插件不保存 OpenClaw Gateway Token，只保存 Museve Channel Token。
 - 所有通信强制使用 `wss://` 加密传输。
 - Token 支持随时 revoke 和 rotate。
 - 所有事件带有幂等性 key，断线重连不会重复执行副作用操作。

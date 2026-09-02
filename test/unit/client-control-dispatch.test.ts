@@ -6,10 +6,10 @@ import { createEvent } from "../../src/protocol.js";
 
 function makeStore() {
   const data: Record<string, unknown> = {
-    "channels.xalgo_voice.token": "t",
-    "channels.xalgo_voice.instanceId": "oc_test",
-    "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-    "channels.xalgo_voice.boundUserId": "u_1",
+    "channels.museve_voice.token": "t",
+    "channels.museve_voice.instanceId": "oc_test",
+    "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+    "channels.museve_voice.boundUserId": "u_1",
   };
   return createBindingStore({
     read: async (k) => data[k],

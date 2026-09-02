@@ -97,7 +97,7 @@ export default async function setup(rawContext: unknown): Promise<void> {
   }
   const context = rawContext;
 
-  context.log("Xalgo Voice Channel 配置向导");
+  context.log("Museve Voice Channel 配置向导");
   context.log("────────────────────────────");
   context.log("");
 
@@ -132,7 +132,7 @@ export default async function setup(rawContext: unknown): Promise<void> {
 
   // 2. prompt 绑定码
   context.log("");
-  context.log("请在 Xalgo App 中点击「连接 OpenClaw」获取 8 位绑定码。");
+  context.log("请在 Museve App 中点击「连接 OpenClaw」获取 8 位绑定码。");
   const code = (await context.prompt("请输入绑定码:")).trim().toUpperCase();
   if (!code) {
     context.log("已取消。");
@@ -196,9 +196,9 @@ export default async function setup(rawContext: unknown): Promise<void> {
     boundUserName: resp.userDisplayName,
     deviceLabel: `OpenClaw on ${os.hostname()}`,
   });
-  await context.writeConfig("channels.xalgo_voice.enabled", true);
-  await context.writeConfig("channels.xalgo_voice.apiBaseUrl", apiBaseUrl);
-  await context.writeConfig("channels.xalgo_voice.serverUrl", resp.wsUrl);
+  await context.writeConfig("channels.museve_voice.enabled", true);
+  await context.writeConfig("channels.museve_voice.apiBaseUrl", apiBaseUrl);
+  await context.writeConfig("channels.museve_voice.serverUrl", resp.wsUrl);
 
   context.log("✓ 绑定成功，配置已保存。");
   context.log("  插件启动后会自动建立 WebSocket 连接。");

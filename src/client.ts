@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { createLogger } from "./logger.js";
-import { type XalgoVoiceConfig } from "./config.js";
+import { type MuseveVoiceConfig } from "./config.js";
 import { ReconnectManager } from "./reconnect.js";
 import type { BindingStore } from "./binding-store.js";
 import {
@@ -27,7 +27,7 @@ export interface ClientEvents {
 }
 
 export class XvcClient {
-  private config: XalgoVoiceConfig;
+  private config: MuseveVoiceConfig;
   private ws: WebSocket | null = null;
   private reconnect: ReconnectManager;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
@@ -41,7 +41,7 @@ export class XvcClient {
   private bindingStore: BindingStore;
 
   constructor(
-    config: XalgoVoiceConfig,
+    config: MuseveVoiceConfig,
     events: ClientEvents,
     bindingStore: BindingStore
   ) {
@@ -133,12 +133,12 @@ export class XvcClient {
       protocol_version: 1,
       client: {
         kind: "openclaw",
-        plugin: "@xalgo/voice-openclaw-plugin",
+        plugin: "@museve/voice-openclaw-plugin",
         plugin_version: "2026.5.16",
         instance_id: binding.instanceId,
         device_name: binding.deviceLabel ?? "OpenClaw Instance",
       },
-      channel: "xalgo_voice",
+      channel: "museve_voice",
       auth: { token: binding.token },
       capabilities: [
         "text_message",

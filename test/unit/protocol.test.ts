@@ -10,7 +10,7 @@ describe("protocol", () => {
       idempotency_key: "idem_001",
       payload: {
         message_id: "msg_001",
-        chat_id: "xalgo:user:u123",
+        chat_id: "museve:user:u123",
         chat_type: "direct",
         sender: { id: "u123", name: "Test" },
         text: "hello",

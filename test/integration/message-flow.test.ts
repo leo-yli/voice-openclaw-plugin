@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { MockXalgoServer } from "./mock-server.js";
-import { createGatewayAdapter, XalgoVoiceChannel } from "../../src/channel.js";
+import { MockMuseveServer } from "./mock-server.js";
+import { createGatewayAdapter, MuseveVoiceChannel } from "../../src/channel.js";
 import type { InboundMessage } from "../../src/inbound.js";
 import { createBindingStore } from "../../src/binding-store.js";
 
@@ -13,10 +13,10 @@ async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void
 }
 
 describe("integration: message flow", () => {
-  let server: MockXalgoServer;
+  let server: MockMuseveServer;
 
   beforeEach(async () => {
-    server = new MockXalgoServer({ token: "valid_token" });
+    server = new MockMuseveServer({ token: "valid_token" });
     await server.start();
   });
 
@@ -24,21 +24,21 @@ describe("integration: message flow", () => {
     await server.stop();
   });
 
-  it("receives inbound message from Xalgo", async () => {
+  it("receives inbound message from Museve", async () => {
     const messages: InboundMessage[] = [];
 
     const memory1: Record<string, unknown> = {
-      "channels.xalgo_voice.token": "valid_token",
-      "channels.xalgo_voice.instanceId": "oc_test_instance",
-      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgo_voice.boundUserId": "u_test",
+      "channels.museve_voice.token": "valid_token",
+      "channels.museve_voice.instanceId": "oc_test_instance",
+      "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museve_voice.boundUserId": "u_test",
     };
     const store1 = createBindingStore({
       read: async (k) => memory1[k],
       write: async (k, v) => { memory1[k] = v; },
     });
 
-    const channel = new XalgoVoiceChannel({
+    const channel = new MuseveVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
     }, store1);
@@ -61,19 +61,19 @@ describe("integration: message flow", () => {
     await channel.stop();
   });
 
-  it("sends outbound reply to Xalgo", async () => {
+  it("sends outbound reply to Museve", async () => {
     const memory2: Record<string, unknown> = {
-      "channels.xalgo_voice.token": "valid_token",
-      "channels.xalgo_voice.instanceId": "oc_test_instance",
-      "channels.xalgo_voice.boundAt": "2026-05-15T00:00:00Z",
-      "channels.xalgo_voice.boundUserId": "u_test",
+      "channels.museve_voice.token": "valid_token",
+      "channels.museve_voice.instanceId": "oc_test_instance",
+      "channels.museve_voice.boundAt": "2026-05-15T00:00:00Z",
+      "channels.museve_voice.boundUserId": "u_test",
     };
     const store2 = createBindingStore({
       read: async (k) => memory2[k],
       write: async (k, v) => { memory2[k] = v; },
     });
 
-    const channel = new XalgoVoiceChannel({
+    const channel = new MuseveVoiceChannel({
       token: "valid_token",
       serverUrl: server.getUrl(),
       streaming: false,
@@ -86,7 +86,7 @@ describe("integration: message flow", () => {
 
     await new Promise((r) => setTimeout(r, 300));
 
-    channel.sendReply("你有三个待办", "msg_001", "xalgo:user:u123");
+    channel.sendReply("你有三个待办", "msg_001", "museve:user:u123");
 
     await new Promise((r) => setTimeout(r, 200));
 
@@ -98,10 +98,10 @@ describe("integration: message flow", () => {
     await channel.stop();
   });
 
-  it("sends gateway OpenClaw replies back to Xalgo", async () => {
+  it("sends gateway OpenClaw replies back to Museve", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "valid_token",
           instanceId: "oc_test_instance",
@@ -138,7 +138,7 @@ describe("integration: message flow", () => {
     const gateway = createGatewayAdapter();
     const run = gateway.startAccount({
       cfg: config,
-      account: config.channels.xalgo_voice,
+      account: config.channels.museve_voice,
       accountId: "default",
       abortSignal: abort.signal,
       runtime,
@@ -158,7 +158,7 @@ describe("integration: message flow", () => {
       expect((outbound!.payload as any).agent_binding_id).toBe("agent_binding_test");
       expect((outbound!.payload as any).risk_state).toBe("R0");
       expect((outbound!.payload as any).is_final).toBe(true);
-      expect((outbound!.payload as any).chat_id).toBe("xalgo:user:u123");
+      expect((outbound!.payload as any).chat_id).toBe("museve:user:u123");
     } finally {
       abort.abort();
       await run;
@@ -168,7 +168,7 @@ describe("integration: message flow", () => {
   it("routes PUPA voice.user_turn replies with session fields", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "valid_token",
           instanceId: "oc_test_instance",
@@ -204,7 +204,7 @@ describe("integration: message flow", () => {
     const gateway = createGatewayAdapter();
     const run = gateway.startAccount({
       cfg: config,
-      account: config.channels.xalgo_voice,
+      account: config.channels.museve_voice,
       accountId: "default",
       abortSignal: abort.signal,
       runtime,
@@ -230,7 +230,7 @@ describe("integration: message flow", () => {
   it("cancels active gateway runtime work on voice.cancel_request", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "valid_token",
           instanceId: "oc_test_instance",
@@ -273,7 +273,7 @@ describe("integration: message flow", () => {
     const gateway = createGatewayAdapter();
     const run = gateway.startAccount({
       cfg: config,
-      account: config.channels.xalgo_voice,
+      account: config.channels.museve_voice,
       accountId: "default",
       abortSignal: abort.signal,
       runtime,
@@ -305,7 +305,7 @@ describe("integration: message flow", () => {
   it("acks voice.cancel_request with session fields even without active work", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "valid_token",
           instanceId: "oc_test_instance",
@@ -339,7 +339,7 @@ describe("integration: message flow", () => {
     const gateway = createGatewayAdapter();
     const run = gateway.startAccount({
       cfg: config,
-      account: config.channels.xalgo_voice,
+      account: config.channels.museve_voice,
       accountId: "default",
       abortSignal: abort.signal,
       runtime,

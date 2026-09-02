@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-@xalgo/voice-openclaw-plugin — OpenClaw Channel 插件，让用户通过 Xalgo 眼镜语音实时控制自己的 OpenClaw Agent。插件作为 WebSocket 客户端主动连接 Xalgo Voice Channel Server，不需要 OpenClaw 暴露公网端口。
+@museve/voice-openclaw-plugin — OpenClaw Channel 插件，让用户通过 Museve 眼镜语音实时控制自己的 OpenClaw Agent。插件作为 WebSocket 客户端主动连接 Museve Voice Channel Server，不需要 OpenClaw 暴露公网端口。
 
 ## 构建与运行
 
@@ -37,8 +37,8 @@ npx vitest --watch                            # watch 模式
    - Resume (last_event_id) 恢复未投递事件
 
 2. **Protocol Layer** (`src/protocol.ts`, `src/inbound.ts`, `src/outbound.ts`, `src/streaming.ts`, `src/confirmation.ts`, `src/interrupt.ts`, `src/delivery-ack.ts`, `src/session.ts`)
-   - XVC (Xalgo Voice Channel Protocol) 事件类型定义与分发
-   - 消息转换：Xalgo ↔ OpenClaw 格式互转
+   - XVC (Museve Voice Channel Protocol) 事件类型定义与分发
+   - 消息转换：Museve ↔ OpenClaw 格式互转
    - 流式回复：outbound_delta 序列管理
    - 确认状态机：pending/resolved/timeout，R3 禁止纯语音
    - 打断处理：cancel 当前输出 + playback ledger + follow-up 新意图

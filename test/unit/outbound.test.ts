@@ -7,7 +7,7 @@ describe("outbound", () => {
       messageId: "reply_001",
       sessionId: "voice_session_001",
       agentBindingId: "agent_binding_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       replyTo: "msg_001",
       text: "你今天有三个待办",
       replyMode: "voice_first",
@@ -17,7 +17,7 @@ describe("outbound", () => {
     expect(result.payload.message_id).toBe("reply_001");
     expect(result.payload.session_id).toBe("voice_session_001");
     expect(result.payload.agent_binding_id).toBe("agent_binding_001");
-    expect(result.payload.chat_id).toBe("xalgo:user:u123");
+    expect(result.payload.chat_id).toBe("museve:user:u123");
     expect(result.payload.reply_to).toBe("msg_001");
     expect(result.payload.text).toBe("你今天有三个待办");
     expect(result.payload.risk_state).toBe("R0");
@@ -29,7 +29,7 @@ describe("outbound", () => {
   it("formats text_first reply mode", () => {
     const result = formatOutboundMessage({
       messageId: "reply_002",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       replyTo: "msg_002",
       text: "hello",
       replyMode: "text_first",
@@ -44,7 +44,7 @@ describe("outbound", () => {
       messageId: "reply_001",
       sessionId: "voice_session_001",
       agentBindingId: "agent_binding_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       deltaSeq: 3,
       textDelta: "三个待办",
       spanId: "span_001",
@@ -65,7 +65,7 @@ describe("outbound", () => {
   it("formats final delta", () => {
     const result = formatOutboundDelta({
       messageId: "reply_001",
-      chatId: "xalgo:user:u123",
+      chatId: "museve:user:u123",
       deltaSeq: 10,
       textDelta: "",
       spanId: "span_001",

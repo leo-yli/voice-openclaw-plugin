@@ -1,32 +1,32 @@
 {
-  "id": "xalgo_voice",
-  "name": "Xalgo Voice",
+  "id": "museve_voice",
+  "name": "Museve Voice",
   "version": "2026.5.16",
-  "description": "通过 Xalgo 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
+  "description": "通过 Museve 眼镜语音接入 OpenClaw Agent，使用 8 位绑定码完成账号绑定。",
   "main": "./dist/index.js",
   "openclaw": {
     "extensions": ["./dist/index.js"],
     "channel": {
-      "id": "xalgo_voice",
-      "label": "Xalgo Voice",
-      "selectionLabel": "Xalgo Voice（Xalgo 眼镜语音接入 OpenClaw）",
-      "docsPath": "/channels/xalgo-voice",
-      "blurb": "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
+      "id": "museve_voice",
+      "label": "Museve Voice",
+      "selectionLabel": "Museve Voice（Museve 眼镜语音接入 OpenClaw）",
+      "docsPath": "/channels/museve-voice",
+      "blurb": "通过 Museve 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
       "order": 200
     },
     "install": {
-      "npmSpec": "@xalgo/voice-openclaw-plugin",
-      "localPath": "extensions/xalgo-voice",
+      "npmSpec": "@museve/voice-openclaw-plugin",
+      "localPath": "extensions/museve-voice",
       "defaultChoice": "npm"
     }
   },
 
-  "channels": ["xalgo_voice"],
+  "channels": ["museve_voice"],
 
   "channelConfigs": {
-    "xalgo_voice": {
-      "label": "Xalgo Voice",
-      "description": "通过 Xalgo 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
+    "museve_voice": {
+      "label": "Museve Voice",
+      "description": "通过 Museve 眼镜语音控制 OpenClaw Agent，使用 8 位绑定码完成绑定。",
       "schema": {
         "type": "object",
         "additionalProperties": false,
@@ -42,7 +42,7 @@
           "boundUserName": { "type": "string" },
           "_pendingCode": { "type": "string" },
           "agentId": { "type": "string", "default": "voice" },
-          "sessionPrefix": { "type": "string", "default": "xalgo_voice" },
+          "sessionPrefix": { "type": "string", "default": "museve_voice" },
           "streaming": { "type": "boolean", "default": true },
           "replyMode": { "type": "string", "enum": ["voice_first", "text_first", "both"], "default": "voice_first" },
           "riskPolicy": {
@@ -67,7 +67,7 @@
         "required": []
       },
       "uiHints": {
-        "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
+        "token": { "label": "Channel Token", "sensitive": true, "placeholder": "museve_channel_..." },
         "serverUrl": { "label": "WebSocket URL" },
         "apiBaseUrl": { "label": "API Server URL" },
         "agentId": { "label": "Agent ID" },
@@ -91,7 +91,7 @@
 
   "activation": {
     "onStartup": false,
-    "onChannels": ["xalgo_voice"]
+    "onChannels": ["museve_voice"]
   },
 
   "configSchema": {
@@ -108,7 +108,7 @@
       "boundUserId": { "type": "string" },
       "boundUserName": { "type": "string" },
       "agentId": { "type": "string", "default": "voice" },
-      "sessionPrefix": { "type": "string", "default": "xalgo_voice" },
+      "sessionPrefix": { "type": "string", "default": "museve_voice" },
       "streaming": { "type": "boolean", "default": true },
       "replyMode": { "type": "string", "enum": ["voice_first", "text_first", "both"], "default": "voice_first" },
       "riskPolicy": {
@@ -134,7 +134,7 @@
   },
 
   "uiHints": {
-    "token": { "label": "Channel Token", "sensitive": true, "placeholder": "xalgo_channel_..." },
+    "token": { "label": "Channel Token", "sensitive": true, "placeholder": "museve_channel_..." },
     "serverUrl": { "label": "WebSocket URL" },
     "apiBaseUrl": { "label": "API Server URL" },
     "agentId": { "label": "Agent ID" },

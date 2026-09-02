@@ -12,7 +12,7 @@ export interface ReconnectConfig {
   resume: boolean;
 }
 
-export interface XalgoVoiceConfig {
+export interface MuseveVoiceConfig {
   enabled: boolean;
   serverUrl: string;
   token: string;
@@ -32,11 +32,11 @@ export interface XalgoVoiceConfig {
   boundUserName: string;
 }
 
-export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
+export const DEFAULT_CONFIG: Omit<MuseveVoiceConfig, "token"> = {
   enabled: false,
   serverUrl: endpoints.serverUrl,
   agentId: "voice",
-  sessionPrefix: "xalgo_voice",
+  sessionPrefix: "museve_voice",
   streaming: true,
   replyMode: "voice_first",
   riskPolicy: {
@@ -57,7 +57,7 @@ export const DEFAULT_CONFIG: Omit<XalgoVoiceConfig, "token"> = {
   boundUserName: "",
 };
 
-export function resolveConfig(raw: Partial<XalgoVoiceConfig> & { token: string }): XalgoVoiceConfig {
+export function resolveConfig(raw: Partial<MuseveVoiceConfig> & { token: string }): MuseveVoiceConfig {
   return {
     ...DEFAULT_CONFIG,
     ...raw,

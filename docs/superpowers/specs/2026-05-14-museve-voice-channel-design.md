@@ -1,4 +1,4 @@
-# Xalgo Voice OpenClaw Channel Plugin 设计文档
+# Museve Voice OpenClaw Channel Plugin 设计文档
 
 版本：v1.0  
 日期：2026-05-14  
@@ -8,9 +8,9 @@
 
 ## 1. 概述
 
-`@xalgo/voice-openclaw-plugin` 是一个 OpenClaw Channel 插件，让用户通过 Xalgo 眼镜语音实时控制自己的 OpenClaw Agent。
+`@museve/voice-openclaw-plugin` 是一个 OpenClaw Channel 插件，让用户通过 Museve 眼镜语音实时控制自己的 OpenClaw Agent。
 
-核心定位：把 Xalgo 的语音通道接入 OpenClaw 的消息系统，不做 AI Agent 本体，不做 ASR/TTS/AEC。
+核心定位：把 Museve 的语音通道接入 OpenClaw 的消息系统，不做 AI Agent 本体，不做 ASR/TTS/AEC。
 
 ---
 
@@ -26,7 +26,7 @@
 
 ```
 OpenClaw Instance
-└── @xalgo/voice-openclaw-plugin
+└── @museve/voice-openclaw-plugin
     ├── Channel Layer (api.registerChannel)
     │   ├── inbound adapter
     │   └── outbound adapter
@@ -42,7 +42,7 @@ OpenClaw Instance
         └── reconnect + resume
 ```
 
-传输方式：单 WebSocket 双向通信。插件作为 WebSocket 客户端主动连接 Xalgo Voice Channel Server（已存在），inbound 和 outbound 都走同一个连接。
+传输方式：单 WebSocket 双向通信。插件作为 WebSocket 客户端主动连接 Museve Voice Channel Server（已存在），inbound 和 outbound 都走同一个连接。
 
 ---
 
@@ -71,8 +71,8 @@ voice-openclaw-plugin/
 │   ├── client.ts                 # Transport: WebSocket 客户端
 │   ├── reconnect.ts              # Transport: 指数退避重连 + resume
 │   ├── protocol.ts               # Protocol: 事件类型定义 + 分发
-│   ├── inbound.ts                # Protocol: Xalgo → OpenClaw 消息转换
-│   ├── outbound.ts               # Protocol: OpenClaw → Xalgo 消息转换
+│   ├── inbound.ts                # Protocol: Museve → OpenClaw 消息转换
+│   ├── outbound.ts               # Protocol: OpenClaw → Museve 消息转换
 │   ├── confirmation.ts           # Protocol: 确认请求/响应/超时
 │   ├── interrupt.ts              # Protocol: 打断处理 + playback ledger
 │   ├── streaming.ts              # Protocol: outbound_delta 流式处理
@@ -89,7 +89,7 @@ voice-openclaw-plugin/
 │   │   ├── interrupt.test.ts
 │   │   └── session.test.ts
 │   └── integration/
-│       ├── mock-server.ts        # Mock Xalgo Channel Server
+│       ├── mock-server.ts        # Mock Museve Channel Server
 │       ├── connect.test.ts       # 连接 + 鉴权完整链路
 │       └── message-flow.test.ts  # 消息收发完整链路
 └── docs/
@@ -107,7 +107,7 @@ voice-openclaw-plugin/
 | `index.ts` | Entry | 调用 `api.registerChannel()` 注册插件 |
 | `setup-entry.ts` | Entry | OpenClaw 安装后配置引导：提示用户输入绑定码，验证连通性，写入 token |
 | `channel.ts` | Channel | 实现 InboundAdapter / OutboundAdapter 接口 |
-| `config.ts` | Channel | 定义 `XalgoVoiceConfig` 类型，读取 OpenClaw 配置 |
+| `config.ts` | Channel | 定义 `MuseveVoiceConfig` 类型，读取 OpenClaw 配置 |
 | `client.ts` | Transport | WebSocket 连接管理、send/receive、ping/pong |
 | `reconnect.ts` | Transport | 指数退避（1s→2s→5s→15s→30s）、resume |
 | `protocol.ts` | Protocol | 所有 XVC 事件类型定义 + 事件路由分发器 |
@@ -131,16 +131,16 @@ voice-openclaw-plugin/
 import type { OpenClawApi } from "openclaw";
 import { createInboundAdapter, outbound } from "./src/channel.js";
 
-export default function registerXalgoVoicePlugin(api: OpenClawApi) {
+export default function registerMuseveVoicePlugin(api: OpenClawApi) {
   api.registerChannel({
     plugin: {
-      id: "xalgo_voice",
+      id: "museve_voice",
       meta: {
-        id: "xalgo_voice",
-        label: "Xalgo Voice",
-        selectionLabel: "Xalgo Voice (语音)",
-        docsPath: "/channels/xalgo-voice",
-        blurb: "Talk to your OpenClaw agents through Xalgo voice devices.",
+        id: "museve_voice",
+        label: "Museve Voice",
+        selectionLabel: "Museve Voice (语音)",
+        docsPath: "/channels/museve-voice",
+        blurb: "Talk to your OpenClaw agents through Museve voice devices.",
       },
       capabilities: {
         chatTypes: ["direct"],
@@ -156,7 +156,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
       config: {
         listAccountIds: (cfg) => ["default"],
         resolveAccount: (cfg, accountId) =>
-          cfg.channels?.xalgoVoice ?? { accountId: "default" },
+          cfg.channels?.museveVoice ?? { accountId: "default" },
       },
       outbound,
       inbound: createInboundAdapter(),
@@ -177,13 +177,13 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   "protocol_version": 1,
   "client": {
     "kind": "openclaw",
-    "plugin": "@xalgo/voice-openclaw-plugin",
+    "plugin": "@museve/voice-openclaw-plugin",
     "plugin_version": "0.1.0",
     "instance_id": "<openclaw_instance_id>",
     "device_name": "<user_defined_name>"
   },
-  "channel": "xalgo_voice",
-  "auth": { "token": "<XALGO_CHANNEL_TOKEN>" },
+  "channel": "museve_voice",
+  "auth": { "token": "<MUSEVE_CHANNEL_TOKEN>" },
   "capabilities": [
     "text_message",
     "streaming_reply",
@@ -201,7 +201,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
 {
   "type": "connected",
   "connection_id": "<conn_id>",
-  "user_id": "<xalgo_user_id>",
+  "user_id": "<museve_user_id>",
   "heartbeat_interval_ms": 15000,
   "server_capabilities": [
     "asr_final",
@@ -228,7 +228,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   "type": "resume",
   "connection_id": "<previous_conn_id>",
   "last_event_id": "<last_received_event_id>",
-  "auth": { "token": "<XALGO_CHANNEL_TOKEN>" }
+  "auth": { "token": "<MUSEVE_CHANNEL_TOKEN>" }
 }
 ```
 
@@ -252,14 +252,14 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
 
 ## 8. 核心事件类型
 
-### 8.1 inbound_message（Xalgo → OpenClaw）
+### 8.1 inbound_message（Museve → OpenClaw）
 
 ```json
 {
   "type": "inbound_message",
   "payload": {
     "message_id": "<id>",
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "chat_type": "direct",
     "sender": { "id": "<user_id>", "name": "<name>" },
     "text": "<ASR transcript>",
@@ -275,14 +275,14 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
 }
 ```
 
-### 8.2 outbound_message（OpenClaw → Xalgo）
+### 8.2 outbound_message（OpenClaw → Museve）
 
 ```json
 {
   "type": "outbound_message",
   "payload": {
     "message_id": "<id>",
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "reply_to": "<original_message_id>",
     "text": "<agent reply>",
     "metadata": {
@@ -302,7 +302,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   "type": "outbound_delta",
   "payload": {
     "message_id": "<id>",
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "delta_seq": 1,
     "text_delta": "<partial text>",
     "span_id": "<span_id>",
@@ -318,7 +318,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   "type": "confirmation_request",
   "payload": {
     "confirmation_id": "<id>",
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "reply_to": "<original_message_id>",
     "text": "<confirmation prompt>",
     "risk_level": "R2",
@@ -335,7 +335,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
   "type": "confirmation_response",
   "payload": {
     "confirmation_id": "<id>",
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "result": "confirmed" | "denied" | "timeout",
     "text": "<user said>",
     "asr_confidence": 0.95,
@@ -350,7 +350,7 @@ export default function registerXalgoVoicePlugin(api: OpenClawApi) {
 {
   "type": "voice_interrupt",
   "payload": {
-    "chat_id": "xalgo:user:<user_id>",
+    "chat_id": "museve:user:<user_id>",
     "duplex_session_id": "<session_id>",
     "interrupted_message_id": "<msg_id>",
     "text": "<new intent>",
@@ -441,8 +441,8 @@ Agent 判断 R2+ → confirmation.ts 生成 request → send
 ## 10. Session 映射
 
 格式：
-- Direct: `xalgo_voice:direct:<xalgo_user_id>`
-- Room: `xalgo_voice:room:<room_id>`
+- Direct: `museve_voice:direct:<museve_user_id>`
+- Room: `museve_voice:room:<room_id>`
 
 规则：
 - 同一用户的眼镜/手机共用 direct session
@@ -472,19 +472,19 @@ Agent 判断 R2+ → confirmation.ts 生成 request → send
 | 消息格式错误 | warn 日志，跳过，不中断连接 |
 | 确认超时 | "timeout" 结果，通知 Agent 取消 |
 | resume 失败 | 降级为全新 connect |
-| Agent 处理异常 | outbound error 通知 Xalgo |
+| Agent 处理异常 | outbound error 通知 Museve |
 
 ---
 
 ## 13. 配置 Schema
 
 ```typescript
-interface XalgoVoiceConfig {
+interface MuseveVoiceConfig {
   enabled: boolean;
   serverUrl: string;              // "wss://asr-test.jlpay.com/agent-channel/connect"
-  token: string;                  // XALGO_CHANNEL_TOKEN
+  token: string;                  // MUSEVE_CHANNEL_TOKEN
   agentId: string;                // "voice"
-  sessionPrefix: string;          // "xalgo_voice"
+  sessionPrefix: string;          // "museve_voice"
   streaming: boolean;             // true
   replyMode: "voice_first" | "text_first" | "both";
   riskPolicy: {
@@ -504,7 +504,7 @@ interface XalgoVoiceConfig {
 
 ## 14. 安全原则
 
-1. 不保存 OpenClaw Gateway Token，只保存 Xalgo Channel Token
+1. 不保存 OpenClaw Gateway Token，只保存 Museve Channel Token
 2. OpenClaw 主动出站连接，不暴露内网端口
 3. 强制 wss:// 加密传输
 4. Token 支持 revoke / rotate
@@ -528,7 +528,7 @@ interface XalgoVoiceConfig {
 
 ### 集成测试
 
-- mock-server.ts：模拟 Xalgo Channel Server WebSocket 端
+- mock-server.ts：模拟 Museve Channel Server WebSocket 端
 - connect.test.ts：连接 → 鉴权 → connected 完整链路
 - message-flow.test.ts：说话 → Agent → 回复完整链路
 
@@ -550,7 +550,7 @@ interface XalgoVoiceConfig {
 
 ```json
 {
-  "name": "@xalgo/voice-openclaw-plugin",
+  "name": "@museve/voice-openclaw-plugin",
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
@@ -568,10 +568,10 @@ interface XalgoVoiceConfig {
 
 ## 18. 与飞书 Channel 的异同
 
-| 方面 | 飞书 Channel | Xalgo Voice Channel |
+| 方面 | 飞书 Channel | Museve Voice Channel |
 |------|-------------|---------------------|
-| 传输 | WebSocket (飞书 API) | WebSocket (Xalgo Server) |
-| 连接方向 | 插件主动连接飞书 | 插件主动连接 Xalgo |
+| 传输 | WebSocket (飞书 API) | WebSocket (Museve Server) |
+| 连接方向 | 插件主动连接飞书 | 插件主动连接 Museve |
 | 消息格式 | 飞书事件 | XVC 协议 |
 | 鉴权 | appId + appSecret | channel token |
 | 输入类型 | 文字/图片/文件 | 语音 ASR 文本 |

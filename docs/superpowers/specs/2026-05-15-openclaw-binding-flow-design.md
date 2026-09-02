@@ -3,13 +3,13 @@
 版本：v1.0
 日期：2026-05-15
 方案选型：方案 A（HTTPS REST 做绑定/解绑/Rotate，WebSocket 做运行时与控制事件）
-依赖：基于 `2026-05-14-xalgo-voice-channel-design.md` 已确立的 XVC 协议与 Channel Plugin 架构
+依赖：基于 `2026-05-14-museve-voice-channel-design.md` 已确立的 XVC 协议与 Channel Plugin 架构
 
 ---
 
 ## 1. 概述
 
-本文档定义 `@xalgo/voice-openclaw-plugin` 如何与 Xalgo Voice Channel Server 建立绑定关系，覆盖首次绑定、长期鉴权、解绑、Rotate Token、异常处理与安全设计。
+本文档定义 `@museve/voice-openclaw-plugin` 如何与 Museve Voice Channel Server 建立绑定关系，覆盖首次绑定、长期鉴权、解绑、Rotate Token、异常处理与安全设计。
 
 ### 1.1 解决的问题
 
@@ -25,7 +25,7 @@
 | 目标 | 衡量 |
 |---|---|
 | 用户体验对齐主流 SaaS 集成 | 类似 Steam Guard / GitHub `gh auth login` / Telegram BotFather |
-| 服务端不存 OpenClaw Gateway Token | 仅存 Xalgo Channel Token + 关系数据 |
+| 服务端不存 OpenClaw Gateway Token | 仅存 Museve Channel Token + 关系数据 |
 | Token 泄漏到第三方机器无法使用 | 双因子鉴权（Token + instance_id） |
 | 用户在 App 解绑后插件秒级感知 | WebSocket control_event 推送 |
 | 协议向前兼容 | 复用 XVC envelope，仅新增 4 个事件类型 |
@@ -44,7 +44,7 @@
 | # | 决策点 | 选择 | 理由 |
 |---|---|---|---|
 | D1 | 凭据形态 | 绑定码 → 长期 Token | 兼顾输入便利与长期稳定 |
-| D2 | 发起方 | Xalgo App 出码，OpenClaw 输码 | 与现有 setup wizard prompt UI 契合，App 是用户主入口 |
+| D2 | 发起方 | Museve App 出码，OpenClaw 输码 | 与现有 setup wizard prompt UI 契合，App 是用户主入口 |
 | D3 | 多设备 | 多台并存 (user_id + instance_id) | 家里 + 公司多台 OpenClaw 场景 |
 | D4 | 绑定码格式 | 8 位字母数字（Base32 排除 0/O/1/I/L/S/2/Z）+ 5 分钟过期 | 千亿级组合空间 + 短窗口防爆破 |
 | D5 | 绑定码 UI | 仅字符码，无 QR | OpenClaw 是 CLI 进程无摄像头，QR 在此场景无价值 |
@@ -62,7 +62,7 @@
 
 ```
 ┌──────────────────┐                              ┌──────────────────┐
-│  Xalgo App       │                              │  OpenClaw 进程    │
+│  Museve App       │                              │  OpenClaw 进程    │
 │  (iOS/Android)   │                              │                  │
 │                  │                              │  ┌─────────────┐ │
 │  ┌─ 设备管理 ──┐│                              │  │ setup-entry │ │
@@ -80,7 +80,7 @@
          │                                                  │ + WebSocket (XVC运行时)
          ▼                                                  ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  Xalgo Voice Channel Server                                          │
+│  Museve Voice Channel Server                                          │
 │                                                                      │
 │  ┌─ HTTPS REST API ─────────┐    ┌─ WebSocket Endpoint ──────────┐  │
 │  │ POST /bindings/codes     │    │ /agent-channel/connect             │  │
@@ -106,7 +106,7 @@
 
 | 组件 | 在绑定流程里干什么 | 不干什么 |
 |---|---|---|
-| **Xalgo App** | 用户点"连接 OpenClaw"；调云端生成 8 位绑定码；显示码 + 倒计时 + 刷新；设备列表 / 解绑 / Rotate 入口 | 不直接跟 OpenClaw 通信，所有操作走云端 |
+| **Museve App** | 用户点"连接 OpenClaw"；调云端生成 8 位绑定码；显示码 + 倒计时 + 刷新；设备列表 / 解绑 / Rotate 入口 | 不直接跟 OpenClaw 通信，所有操作走云端 |
 | **Channel Server** | 生成/校验绑定码；维护 bindings 表；验证 connect 双因子；通过 WS 推 control_event | 不存 OpenClaw Gateway Token；不主动连内网 OpenClaw |
 | **OpenClaw 插件** | setup wizard 收码；POST exchange 换 token；生成并持久化 instance_id；处理 control_event | 不生成绑定码；不调用 App 端 API；不存用户密码 |
 
@@ -144,7 +144,7 @@ instance_id ┘                          (user, instance_id, token_hash)
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `code` | `VARCHAR(8)` PK | Base32 大写，已去除易混字符 0/O/1/I/L/S/2/Z（剩余字符集 ≥ 24 字符 → 8 位组合数超过 1000 亿） |
-| `user_id` | `VARCHAR` | 申请绑定码的 Xalgo 用户 |
+| `user_id` | `VARCHAR` | 申请绑定码的 Museve 用户 |
 | `created_at` | `TIMESTAMP` | 创建时间 |
 | `expires_at` | `TIMESTAMP` | `created_at + 5 min` |
 | `consumed_at` | `TIMESTAMP NULL` | 被 exchange 消费的时间；非 NULL 即失效 |
@@ -156,7 +156,7 @@ instance_id ┘                          (user, instance_id, token_hash)
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `binding_id` | `UUID` PK | 主键 |
-| `user_id` | `VARCHAR` | Xalgo 用户 |
+| `user_id` | `VARCHAR` | Museve 用户 |
 | `instance_id` | `VARCHAR` | 插件持久化的 UUID v4 |
 | `token_hash` | `VARCHAR(64)` | `sha256(channel_token)`，明文 token 永不入库 |
 | `token_prefix` | `VARCHAR(11)` | 例如 `xvc_live_aB`，便于在 App 设备列表显示前缀辨识 |
@@ -170,12 +170,12 @@ instance_id ┘                          (user, instance_id, token_hash)
 
 **唯一约束**：`(user_id, instance_id) WHERE status='active'` 唯一 — 一个用户在同一 OpenClaw 实例上同时只能有一条 active binding。重复绑定走 Rotate 流程而不是新建。
 
-### 4.3 插件本地：`XalgoVoiceConfig` 扩展
+### 4.3 插件本地：`MuseveVoiceConfig` 扩展
 
-扩展现有 `src/config.ts` 的 `XalgoVoiceConfig`：
+扩展现有 `src/config.ts` 的 `MuseveVoiceConfig`：
 
 ```typescript
-interface XalgoVoiceConfig {
+interface MuseveVoiceConfig {
   // ─ 已有字段 ─
   enabled: boolean;
   serverUrl: string;              // WebSocket: wss://asr-test.jlpay.com/agent-channel/connect
@@ -192,14 +192,14 @@ interface XalgoVoiceConfig {
   instanceId: string;             // 插件自生成 UUID v4，首次绑定时写入
   deviceLabel?: string;           // 用户自定义名称，可选
   boundAt: string;                // ISO 8601 时间戳，便于诊断
-  boundUserId: string;            // 仅显示用，告知用户当前绑了哪个 Xalgo 账号
+  boundUserId: string;            // 仅显示用，告知用户当前绑了哪个 Museve 账号
   boundUserName?: string;         // 仅显示用，绑定时服务端返回
 }
 ```
 
 **关于明文 token 存储**：与现有方案一致（设计文档 §13）。OpenClaw 配置文件本身的加密属于 OpenClaw 平台层职责，不由本插件处理。
 
-**`boundUserId` / `boundUserName` 不参与鉴权**，仅作为人眼可读的提示（用户看到"已绑定到 yangli@xalgo"放心）。
+**`boundUserId` / `boundUserName` 不参与鉴权**，仅作为人眼可读的提示（用户看到"已绑定到 yangli@museve"放心）。
 
 ---
 
@@ -239,7 +239,7 @@ X-Idempotency-Key: <uuid>
   "channel_token": "xvc_live_aBcD...64字节...",
   "token_prefix": "xvc_live_aB",
   "binding_id": "b_7f3e...",
-  "user_id": "xalgo_user_123",
+  "user_id": "museve_user_123",
   "user_display_name": "杨立",
   "ws_url": "wss://asr-test.jlpay.com/agent-channel/connect"
 }
@@ -322,7 +322,7 @@ App 侧 `DELETE` / `rotate` 操作后，服务端需要：
 ### 6.1 时序 A：首次绑定（Happy Path）
 
 ```
-User              Xalgo App         Channel Server         OpenClaw Plugin
+User              Museve App         Channel Server         OpenClaw Plugin
  │                    │                    │                    │
  │ 点"连接OpenClaw"   │                    │                    │
  ├───────────────────>│                    │                    │
@@ -340,7 +340,7 @@ User              Xalgo App         Channel Server         OpenClaw Plugin
  │<───────────────────┤                    │                    │
  │                                         │                    │
  │  (用户切到 OpenClaw 终端，执行 setup wizard)                  │
- │  openclaw plugins setup xalgo-voice                          │
+ │  openclaw plugins setup museve-voice                          │
  ├──────────────────────────────────────────────────────────────>│
  │                                         │                    │ a. 检测 instanceId
  │                                         │                    │    不存在
@@ -394,7 +394,7 @@ User              Xalgo App         Channel Server         OpenClaw Plugin
 ### 6.2 时序 B：用户在 App 解绑
 
 ```
-User              Xalgo App         Channel Server         OpenClaw Plugin
+User              Museve App         Channel Server         OpenClaw Plugin
  │                    │                    │  (运行中, WS 在线) │
  │                    │                    │<══════════════════>│
  │ 设备列表→点解绑    │                    │                    │
@@ -441,7 +441,7 @@ User              Xalgo App         Channel Server         OpenClaw Plugin
 ### 6.3 时序 C：Rotate Token
 
 ```
-User              Xalgo App         Channel Server         OpenClaw Plugin
+User              Museve App         Channel Server         OpenClaw Plugin
  │ 设备详情→Rotate    │  (WS 在线)         │                    │
  ├───────────────────>│                    │<══════════════════>│
  │                    │ POST /v1/app/      │                    │
@@ -939,7 +939,7 @@ const PLUGIN_VERSION = "0.1.0";
 
 export default async function setup(context: SetupContext): Promise<void> {
   const log = context.log;
-  log("Xalgo Voice Channel 配置向导");
+  log("Museve Voice Channel 配置向导");
   log("────────────────────────────");
 
   // 1. 检测当前是否已绑定
@@ -965,7 +965,7 @@ export default async function setup(context: SetupContext): Promise<void> {
   }
 
   // 3. prompt 绑定码
-  log("请在 Xalgo App 中点击「连接 OpenClaw」获取绑定码。");
+  log("请在 Museve App 中点击「连接 OpenClaw」获取绑定码。");
   const code = await promptCode(context);
   if (!code) return;
 
@@ -1030,7 +1030,7 @@ import { BindingStore } from "./binding-store.js";
 
 // 改动 1: instanceId 从 binding-store 读，不再 fake
 constructor(
-  config: XalgoVoiceConfig,
+  config: MuseveVoiceConfig,
   events: ClientEvents,
   bindingStore: BindingStore   // ★新增依赖
 ) {
@@ -1145,7 +1145,7 @@ P1-P3 完成即可上线 MVP；P4-P5 可以并行迭代。
 
 ## 附录 A：与现有设计文档的关系
 
-本文档是 `2026-05-14-xalgo-voice-channel-design.md` 的补充，专注于**绑定流程**这一原文档简略带过的部分。两份文档的关系：
+本文档是 `2026-05-14-museve-voice-channel-design.md` 的补充，专注于**绑定流程**这一原文档简略带过的部分。两份文档的关系：
 
 | 维度 | 2026-05-14 文档 | 本文档（2026-05-15） |
 |---|---|---|
@@ -1161,7 +1161,7 @@ P1-P3 完成即可上线 MVP；P4-P5 可以并行迭代。
 
 | 术语 | 全称 | 含义 |
 |---|---|---|
-| XVC | Xalgo Voice Channel Protocol | 现有的语音通道协议 |
+| XVC | Museve Voice Channel Protocol | 现有的语音通道协议 |
 | binding_code | — | 8 位一次性绑定码 |
 | channel_token | — | 长期 Channel Token，绑定 instance_id |
 | instance_id | — | OpenClaw 插件实例 UUID v4，持久化 |

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import plugin from "../../index.js";
-import { resolveXalgoAccount } from "../../src/account-config.js";
+import { resolveMuseveAccount } from "../../src/account-config.js";
 import { createGatewayAdapter, createInboundAdapter } from "../../src/channel.js";
 
 function makeCompleteConfig() {
   return {
     channels: {
-      xalgo_voice: {
+      museve_voice: {
         enabled: true,
         token: "xvc_live_abc",
         instanceId: "oc_123",
@@ -23,7 +23,7 @@ function makeCompleteConfig() {
 function makeCompleteAccountConfig() {
   return {
     channelAccounts: {
-      xalgo_voice: {
+      museve_voice: {
         enabled: true,
         token: "xvc_live_abc",
         instanceId: "oc_123",
@@ -44,9 +44,9 @@ function makeReadConfig(channel: Record<string, unknown>) {
   };
 }
 
-describe("xalgo account config resolution", () => {
+describe("museve account config resolution", () => {
   it("treats the direct channel config object as the account", () => {
-    const account = resolveXalgoAccount({
+    const account = resolveMuseveAccount({
       enabled: true,
       token: "xvc_live_abc",
       instanceId: "oc_123",
@@ -104,7 +104,7 @@ describe("createInboundAdapter startup", () => {
       config,
       handleMessage: () => {},
       handleStatus: (status) => statuses.push(status.status),
-      readConfig: makeReadConfig(config.channels.xalgo_voice),
+      readConfig: makeReadConfig(config.channels.museve_voice),
       writeConfig: async () => {},
     });
 
@@ -117,7 +117,7 @@ describe("createInboundAdapter startup", () => {
   it("reports unbound and does not construct a websocket when required binding fields are missing", async () => {
     const config = {
       channels: {
-        xalgo_voice: {
+        museve_voice: {
           enabled: true,
           token: "xvc_live_abc",
           instanceId: "oc_123",
@@ -134,7 +134,7 @@ describe("createInboundAdapter startup", () => {
       config,
       handleMessage: () => {},
       handleStatus: (status) => statuses.push(status.status),
-      readConfig: makeReadConfig(config.channels.xalgo_voice),
+      readConfig: makeReadConfig(config.channels.museve_voice),
       writeConfig: async () => {},
     });
 
@@ -150,10 +150,10 @@ describe("createInboundAdapter startup", () => {
 
     await adapter.start({
       config,
-      account: config.channelAccounts.xalgo_voice,
+      account: config.channelAccounts.museve_voice,
       handleMessage: () => {},
       handleStatus: (status) => statuses.push(status.status),
-      readConfig: makeReadConfig(config.channelAccounts.xalgo_voice),
+      readConfig: makeReadConfig(config.channelAccounts.museve_voice),
       writeConfig: async () => {},
     } as any);
 

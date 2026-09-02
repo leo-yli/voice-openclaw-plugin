@@ -1,6 +1,6 @@
 # OpenClaw 插件 ↔ 服务端 API 契约
 
-> **目的**：供 Xalgo Channel Server 工程师对照实现。本文档罗列 `@xalgo/voice-openclaw-plugin` 当前会发起的**全部**网络请求 / WebSocket 帧，含精确路径、Header、Body、响应 schema、错误码、关键时序约束。
+> **目的**：供 Museve Channel Server 工程师对照实现。本文档罗列 `@museve/voice-openclaw-plugin` 当前会发起的**全部**网络请求 / WebSocket 帧，含精确路径、Header、Body、响应 schema、错误码、关键时序约束。
 
 **文档版本**：v1.0
 **日期**：2026-05-15
@@ -78,7 +78,7 @@ X-Idempotency-Key: idem_<timestamp>_<random>
   "channel_token": "xvc_live_aBc...64字节...",
   "token_prefix": "xvc_live_aB",
   "binding_id": "b_7f3e...",
-  "user_id": "xalgo_user_123",
+  "user_id": "museve_user_123",
   "user_display_name": "杨立",
   "ws_url": "wss://asr-test.jlpay.com/agent-channel/connect"
 }
@@ -176,7 +176,7 @@ X-Instance-Id: oc_550e8400-...
 ```json
 {
   "binding_id": "b_7f3e...",
-  "user_id": "xalgo_user_123",
+  "user_id": "museve_user_123",
   "user_display_name": "杨立"
 }
 ```
@@ -232,12 +232,12 @@ wss://asr-test.jlpay.com/agent-channel/connect
     "protocol_version": 1,
     "client": {
       "kind": "openclaw",
-      "plugin": "@xalgo/voice-openclaw-plugin",
+      "plugin": "@museve/voice-openclaw-plugin",
       "plugin_version": "2026.5.16",
       "instance_id": "oc_550e8400-...",
       "device_name": "OpenClaw on yangli-mac"
     },
-    "channel": "xalgo_voice",
+    "channel": "museve_voice",
     "auth": { "token": "<channel_token>" },
     "capabilities": [
       "text_message",
@@ -263,7 +263,7 @@ wss://asr-test.jlpay.com/agent-channel/connect
   "idempotency_key": "...",
   "payload": {
     "connection_id": "conn_abc",
-    "user_id": "xalgo_user_123",
+    "user_id": "museve_user_123",
     "heartbeat_interval_ms": 15000,
     "server_capabilities": ["asr_final", "tts_playback", "phone_confirm_card", "duplex_interrupt"]
   }
@@ -431,7 +431,7 @@ REST + WebSocket 鉴权统一错误名表（客户端按这些字符串识别错
 
 - 设计文档：[`docs/superpowers/specs/2026-05-15-openclaw-binding-flow-design.md`](./superpowers/specs/2026-05-15-openclaw-binding-flow-design.md)
 - 实施计划：[`docs/superpowers/plans/2026-05-15-openclaw-binding-flow.md`](./superpowers/plans/2026-05-15-openclaw-binding-flow.md)
-- 配置 schema：[`openclaw.plugin.json`](../openclaw.plugin.json)（与 `src/config.ts` 的 `XalgoVoiceConfig` 接口对齐）
+- 配置 schema：[`openclaw.plugin.json`](../openclaw.plugin.json)（与 `src/config.ts` 的 `MuseveVoiceConfig` 接口对齐）
 - Endpoints 单一源：[`endpoints.json`](../endpoints.json)
 
 ## 反馈方式

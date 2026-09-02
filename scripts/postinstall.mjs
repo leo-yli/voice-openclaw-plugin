@@ -18,7 +18,7 @@ import { join } from "node:path";
 const cwd = process.cwd();
 
 // 检测是不是在 OpenClaw 的 extensions 目录下被装的
-//   典型路径：/root/.openclaw/extensions/xalgo_voice
+//   典型路径：/root/.openclaw/extensions/museve_voice
 //   开发路径：/home/user/voice-openclaw-plugin
 const isOpenClawInstall =
   cwd.includes(".openclaw") &&
@@ -29,15 +29,15 @@ if (!isOpenClawInstall) {
   process.exit(0);
 }
 
-const cliPath = join(cwd, "dist", "bin", "xalgo-bind.js");
+const cliPath = join(cwd, "dist", "bin", "museve-bind.js");
 
 console.log("");
 console.log(
   "════════════════════════════════════════════════════════════════════",
 );
-console.log("  ✓ @xalgo/voice-openclaw-plugin installed.");
+console.log("  ✓ @museve/voice-openclaw-plugin installed.");
 console.log("");
-console.log("  下一步：跑绑定向导收集 Xalgo App 给你的 8 位绑定码 ↓↓↓");
+console.log("  下一步：跑绑定向导收集 Museve App 给你的 8 位绑定码 ↓↓↓");
 console.log("");
 console.log("    node " + cliPath);
 console.log("");

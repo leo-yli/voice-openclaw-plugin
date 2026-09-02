@@ -1,26 +1,26 @@
-# @xalgo/voice-openclaw-plugin
+# @museve/voice-openclaw-plugin
 
-Xalgo Voice Channel plugin for controlling an OpenClaw Agent in real time through Xalgo glasses voice input.
+Museve Voice Channel plugin for controlling an OpenClaw Agent in real time through Museve glasses voice input.
 
 English | [中文](./README.md)
 
 ---
 
-@xalgo/voice-openclaw-plugin is an OpenClaw Channel plugin that lets users control their OpenClaw Agent in real time through voice input from Xalgo glasses. The plugin connects outbound to the Xalgo Voice Channel Server as a WebSocket client, so OpenClaw does not need to expose a public port.
+@museve/voice-openclaw-plugin is an OpenClaw Channel plugin that lets users control their OpenClaw Agent in real time through voice input from Museve glasses. The plugin connects outbound to the Museve Voice Channel Server as a WebSocket client, so OpenClaw does not need to expose a public port.
 
 ## How It Works
 
 ```text
-Xalgo Glasses -> Pupa Cloud (ASR/TTS) -> Xalgo Voice Channel Server
+Museve Glasses -> Pupa Cloud (ASR/TTS) -> Museve Voice Channel Server
                                                 ^ v WebSocket
                                           voice-openclaw-plugin
                                                 |
                                           OpenClaw Agent
 ```
 
-- The plugin actively connects to the Xalgo Channel Server as a WebSocket client.
+- The plugin actively connects to the Museve Channel Server as a WebSocket client.
 - OpenClaw does not need a public inbound endpoint, which makes the plugin suitable for private network deployments.
-- Speech recognition (ASR) and speech synthesis (TTS) are handled by Xalgo Pupa Cloud. The plugin handles protocol conversion and message forwarding.
+- Speech recognition (ASR) and speech synthesis (TTS) are handled by Museve Pupa Cloud. The plugin handles protocol conversion and message forwarding.
 
 ## Quick Start
 
@@ -29,7 +29,7 @@ Requirements:
 - OpenClaw `>= 2026.3.28`
 - Node.js `>= 20`; Node.js 22+ is recommended to avoid the JSON import experimental warning
 
-Setup flow: install the plugin -> bind your Xalgo account -> restart OpenClaw.
+Setup flow: install the plugin -> bind your Museve account -> restart OpenClaw.
 
 ### 1. Install the Plugin
 
@@ -38,7 +38,7 @@ Choose one installation method based on your environment.
 #### Option A: Install from npm
 
 ```bash
-openclaw plugins install @xalgo/voice-openclaw-plugin
+openclaw plugins install @museve/voice-openclaw-plugin
 ```
 
 If the npm package has not been published yet, use Option B first. After the package is installed, the binding and runtime commands are the same.
@@ -66,10 +66,10 @@ Use this when your development machine or CI has network access, but the OpenCla
 cd voice-openclaw-plugin
 npm install
 npm pack
-# Produces xalgo-voice-openclaw-plugin-2026.5.16.tgz
+# Produces museve-voice-openclaw-plugin-2026.5.16.tgz
 
 # On the OpenClaw host:
-openclaw plugins install /path/to/xalgo-voice-openclaw-plugin-2026.5.16.tgz
+openclaw plugins install /path/to/museve-voice-openclaw-plugin-2026.5.16.tgz
 ```
 
 #### Option D: Offline copy into the extensions directory
@@ -87,11 +87,11 @@ tar czf plugin.tar.gz dist node_modules endpoints.json openclaw.plugin.json pack
 # Copy to the OpenClaw host and extract:
 scp plugin.tar.gz root@<host>:/tmp/
 ssh root@<host>
-mkdir -p ~/.openclaw/extensions/xalgo_voice
-tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/xalgo_voice
+mkdir -p ~/.openclaw/extensions/museve_voice
+tar xzf /tmp/plugin.tar.gz -C ~/.openclaw/extensions/museve_voice
 ```
 
-With this method, OpenClaw may mark the plugin as `loaded without install/load-path provenance`. Add `xalgo_voice` to `plugins.allow` in `~/.openclaw/openclaw.json` so OpenClaw trusts and runs the plugin.
+With this method, OpenClaw may mark the plugin as `loaded without install/load-path provenance`. Add `museve_voice` to `plugins.allow` in `~/.openclaw/openclaw.json` so OpenClaw trusts and runs the plugin.
 
 ### 2. Run the Channel Setup Wizard
 
@@ -99,9 +99,9 @@ With this method, OpenClaw may mark the plugin as `loaded without install/load-p
 openclaw channels add
 ```
 
-Choose `Xalgo Voice (语音)` in the wizard, then enter the 8-digit binding code shown in the Xalgo App. The wizard exchanges the short-lived code for a long-lived Channel Token and writes it to the OpenClaw config.
+Choose `Museve Voice (语音)` in the wizard, then enter the 8-digit binding code shown in the Museve App. The wizard exchanges the short-lived code for a long-lived Channel Token and writes it to the OpenClaw config.
 
-To get a binding code, open the Xalgo App and tap "Connect OpenClaw". The App displays an 8-digit code that is valid for 5 minutes.
+To get a binding code, open the Museve App and tap "Connect OpenClaw". The App displays an 8-digit code that is valid for 5 minutes.
 
 ### 3. Restart OpenClaw
 
@@ -113,25 +113,25 @@ openclaw gateway restart
 The startup logs should include lines similar to:
 
 ```text
-[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] WebSocket connected
-[plugins] [@xalgo/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
+[plugins] [@museve/voice-openclaw-plugin 2026.5.16] WebSocket connected
+[plugins] [@museve/voice-openclaw-plugin 2026.5.16] Authenticated, connection_id=...
 ```
 
 You can also verify the plugin with:
 
 ```bash
-openclaw plugins list | grep xalgo
-openclaw plugins inspect xalgo_voice
+openclaw plugins list | grep museve
+openclaw plugins inspect museve_voice
 ```
 
-Once the `xalgo_voice` channel is loaded, speaking to Xalgo glasses can trigger the OpenClaw Agent.
+Once the `museve_voice` channel is loaded, speaking to Museve glasses can trigger the OpenClaw Agent.
 
 ## Upgrade
 
 ### npm installation
 
 ```bash
-openclaw plugins update @xalgo/voice-openclaw-plugin
+openclaw plugins update @museve/voice-openclaw-plugin
 openclaw gateway restart
 ```
 
@@ -144,58 +144,58 @@ cd ~/voice-openclaw-plugin
 git pull
 npm install
 npm run build
-openclaw plugins uninstall xalgo_voice
-rm -rf ~/.openclaw/extensions/xalgo_voice
+openclaw plugins uninstall museve_voice
+rm -rf ~/.openclaw/extensions/museve_voice
 openclaw plugins install .
 openclaw channels add
 openclaw gateway restart
 ```
 
-Do not delete `~/.openclaw/extensions/xalgo_voice` before running `openclaw plugins uninstall xalgo_voice`. Deleting the extension directory directly can leave stale config and cause `unknown channel id` or `plugin not found` errors. If install reports `plugin already exists`, run the official uninstall first, remove the leftover directory, then install again.
+Do not delete `~/.openclaw/extensions/museve_voice` before running `openclaw plugins uninstall museve_voice`. Deleting the extension directory directly can leave stale config and cause `unknown channel id` or `plugin not found` errors. If install reports `plugin already exists`, run the official uninstall first, remove the leftover directory, then install again.
 
 ## Rebind, Unbind, or Switch Accounts
 
-Use one of the following methods when you need to switch Xalgo accounts or rotate a potentially exposed token.
+Use one of the following methods when you need to switch Museve accounts or rotate a potentially exposed token.
 
 ### Option A: Run `openclaw channels add` again
 
 The wizard detects the existing binding and lets you keep it, rebind it, or unbind it.
 
-### Option B: Use the standalone `xalgo-bind` CLI
+### Option B: Use the standalone `museve-bind` CLI
 
 Use this if your OpenClaw version does not support `channels add`, or if you need a scriptable fallback:
 
 ```bash
-node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js
+node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js
 ```
 
 Optionally add an alias to your shell config:
 
 ```bash
-alias xalgo-bind='node ~/.openclaw/extensions/xalgo_voice/dist/bin/xalgo-bind.js'
+alias museve-bind='node ~/.openclaw/extensions/museve_voice/dist/bin/museve-bind.js'
 ```
 
-Then use `xalgo-bind` for binding or unbinding.
+Then use `museve-bind` for binding or unbinding.
 
-### Option C: Unbind in the Xalgo App
+### Option C: Unbind in the Museve App
 
-In the Xalgo App device list, select the corresponding OpenClaw device, then remove it or rotate the token. The server sends `binding_revoked` or `token_rotated_notify` over WebSocket, and the plugin automatically clears or updates the local credentials.
+In the Museve App device list, select the corresponding OpenClaw device, then remove it or rotate the token. The server sends `binding_revoked` or `token_rotated_notify` over WebSocket, and the plugin automatically clears or updates the local credentials.
 
 ## Manual Configuration
 
-The setup wizard writes configuration under `channels.xalgo_voice.*` in `~/.openclaw/openclaw.json`. Manual edits are usually unnecessary. If you need to switch API endpoints or debug the plugin, use this schema as a reference:
+The setup wizard writes configuration under `channels.museve_voice.*` in `~/.openclaw/openclaw.json`. Manual edits are usually unnecessary. If you need to switch API endpoints or debug the plugin, use this schema as a reference:
 
 ```json
 {
   "channels": {
-    "xalgo_voice": {
+    "museve_voice": {
       "enabled": true,
       "serverUrl": "wss://asr-test.jlpay.com/agent-channel/connect",
       "apiBaseUrl": "https://asr-test.jlpay.com/api/v1/agent-channel",
       "token": "<written by the setup wizard>",
       "instanceId": "<written by the setup wizard>",
       "agentId": "voice",
-      "sessionPrefix": "xalgo_voice",
+      "sessionPrefix": "museve_voice",
       "streaming": true,
       "replyMode": "voice_first",
       "riskPolicy": {
@@ -213,7 +213,7 @@ The setup wizard writes configuration under `channels.xalgo_voice.*` in `~/.open
 }
 ```
 
-The default `serverUrl` and `apiBaseUrl` come from `endpoints.json` at the repository root. Developers can switch test or production environments by changing that file. End users should not edit `endpoints.json` inside `node_modules`; override `channels.xalgo_voice.serverUrl` or `channels.xalgo_voice.apiBaseUrl` in the OpenClaw config instead.
+The default `serverUrl` and `apiBaseUrl` come from `endpoints.json` at the repository root. Developers can switch test or production environments by changing that file. End users should not edit `endpoints.json` inside `node_modules`; override `channels.museve_voice.serverUrl` or `channels.museve_voice.apiBaseUrl` in the OpenClaw config instead.
 
 ### Configuration Reference
 
@@ -222,12 +222,12 @@ The default `serverUrl` and `apiBaseUrl` come from `endpoints.json` at the repos
 | `enabled` | boolean | `false` | Whether the plugin is enabled. The setup wizard sets it to `true` after a successful binding. |
 | `serverUrl` | string | `wss://asr-test.jlpay.com/agent-channel/connect` | WebSocket Channel Server URL. |
 | `apiBaseUrl` | string | `https://asr-test.jlpay.com/api/v1/agent-channel` | REST API base URL for exchange, rotate, and unbind. |
-| `token` | string | Written by the setup wizard | Xalgo Channel Token. Do not edit manually. |
+| `token` | string | Written by the setup wizard | Museve Channel Token. Do not edit manually. |
 | `instanceId` | string | UUID v4 generated by the setup wizard | Plugin instance ID used as part of the device fingerprint. |
 | `boundUserId` / `boundUserName` / `boundAt` | string | Written by the setup wizard | Display-only binding metadata. |
-| `deviceLabel` | string | `OpenClaw on <hostname>` | Device label shown in the Xalgo App. |
+| `deviceLabel` | string | `OpenClaw on <hostname>` | Device label shown in the Museve App. |
 | `agentId` | string | `voice` | OpenClaw Agent ID. |
-| `sessionPrefix` | string | `xalgo_voice` | Session ID prefix. |
+| `sessionPrefix` | string | `museve_voice` | Session ID prefix. |
 | `streaming` | boolean | `true` | Whether streaming replies are enabled. |
 | `replyMode` | string | `voice_first` | Reply mode: `voice_first` / `text_first` / `both`. |
 | `riskPolicy.confirmExternalSend` | boolean | `true` | Whether outbound messages require confirmation. |
@@ -241,7 +241,7 @@ The default `serverUrl` and `apiBaseUrl` come from `endpoints.json` at the repos
 
 ### Basic voice interaction
 
-1. The user speaks to Xalgo glasses.
+1. The user speaks to Museve glasses.
 2. Pupa Cloud performs ASR and sends text to the Channel Server.
 3. The plugin receives the message and forwards it to the OpenClaw Agent.
 4. The Agent processes the request and returns text.
@@ -289,8 +289,8 @@ src/
 ├── client.ts         # WebSocket client
 ├── config.ts         # Config types and defaults
 ├── protocol.ts       # XVC protocol event types
-├── inbound.ts        # Inbound message parsing (Xalgo -> OpenClaw)
-├── outbound.ts       # Outbound message formatting (OpenClaw -> Xalgo)
+├── inbound.ts        # Inbound message parsing (Museve -> OpenClaw)
+├── outbound.ts       # Outbound message formatting (OpenClaw -> Museve)
 ├── streaming.ts      # Streaming reply management
 ├── confirmation.ts   # Confirmation state machine
 ├── interrupt.ts      # Voice interruption handling
@@ -302,7 +302,7 @@ src/
 
 ## Security
 
-- The plugin does not store the OpenClaw Gateway Token. It only stores the Xalgo Channel Token.
+- The plugin does not store the OpenClaw Gateway Token. It only stores the Museve Channel Token.
 - All transport uses encrypted `wss://` connections.
 - Tokens can be revoked or rotated at any time.
 - Events include idempotency keys, so reconnect replay does not repeat side-effecting operations.
