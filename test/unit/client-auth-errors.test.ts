@@ -67,9 +67,9 @@ describe("XvcClient auth_failed reasons", () => {
       { onEvent: () => {}, onStatusChange, onControlEvent },
       store
     );
-    const close = vi.fn();
+    const terminate = vi.fn();
     (client as any).status = "connected";
-    (client as any).ws = { close };
+    (client as any).ws = { readyState: 1, terminate };
     (client as any).reconnect.recordConnectionId("conn_old");
     (client as any).reconnect.recordEventId("evt_old");
     (client as any).scheduleReconnect = vi.fn();
@@ -84,7 +84,7 @@ describe("XvcClient auth_failed reasons", () => {
     expect((client as any).reconnectDisabled).toBe(false);
     expect((client as any).reconnect.connectionId).toBeNull();
     expect((client as any).reconnect.lastEventId).toBeNull();
-    expect(close).toHaveBeenCalledWith(1000, "retry fresh connect");
+    expect(terminate).toHaveBeenCalledOnce();
     expect((client as any).scheduleReconnect).toHaveBeenCalledOnce();
     expect(onControlEvent).not.toHaveBeenCalled();
   });

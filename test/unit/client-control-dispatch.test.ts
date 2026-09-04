@@ -66,7 +66,7 @@ describe("XvcClient dispatch: control_event", () => {
     (client as any).reconnect.schedule = reconnectSchedule;
 
     client.disconnect();
-    (client as any).handleClose(1000, "client disconnect");
+    (client as any).handleClose({ close: vi.fn() }, 0, 1000, "client disconnect");
 
     expect((client as any).reconnectDisabled).toBe(true);
     expect(close).toHaveBeenCalledWith(1000, "client disconnect");
@@ -93,5 +93,49 @@ describe("XvcClient dispatch: control_event", () => {
     const sent = JSON.parse(send.mock.calls[0][0]);
     expect(sent.type).toBe("pong");
     expect(sent.payload.ts).toBe(123);
+  });
+
+  it("ignores close events from an obsolete socket", () => {
+    const cfg = resolveConfig({ token: "t" });
+    const client = new XvcClient(
+      cfg,
+      { onEvent: () => {}, onStatusChange: () => {} },
+      makeStore()
+    );
+    const oldWs = { close: vi.fn() };
+    const currentWs = { close: vi.fn() };
+    (client as any).ws = currentWs;
+    (client as any).connectionGeneration = 2;
+    (client as any).status = "connected";
+    const scheduleReconnect = vi.fn();
+    (client as any).scheduleReconnect = scheduleReconnect;
+
+    (client as any).handleClose(oldWs, 1, 1006, "stale");
+
+    expect((client as any).ws).toBe(currentWs);
+    expect(scheduleReconnect).not.toHaveBeenCalled();
+  });
+
+  it("terminates a half-open socket and schedules exactly one heartbeat reconnect", () => {
+    vi.useFakeTimers();
+    const cfg = resolveConfig({ token: "t" });
+    const client = new XvcClient(
+      cfg,
+      { onEvent: () => {}, onStatusChange: () => {} },
+      makeStore()
+    );
+    const ws = { readyState: 1, terminate: vi.fn() };
+    (client as any).ws = ws;
+    (client as any).connectionGeneration = 1;
+    (client as any).status = "connected";
+    const scheduleReconnect = vi.fn();
+    (client as any).scheduleReconnect = scheduleReconnect;
+
+    (client as any).forceReconnect("heartbeat timeout");
+
+    expect(ws.terminate).toHaveBeenCalledOnce();
+    expect((client as any).ws).toBeNull();
+    expect(scheduleReconnect).toHaveBeenCalledOnce();
+    vi.useRealTimers();
   });
 });

@@ -15,6 +15,7 @@ import {
 } from "./protocol.js";
 
 const log = createLogger("client");
+const CONNECTION_TIMEOUT_MS = 15_000;
 
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "auth_failed";
 
@@ -31,12 +32,14 @@ export class XvcClient {
   private ws: WebSocket | null = null;
   private reconnect: ReconnectManager;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private connectionTimeout: ReturnType<typeof setTimeout> | null = null;
   private heartbeatIntervalMs = 15000;
   private missedPongs = 0;
   private maxMissedPongs = 3;
   private status: ConnectionStatus = "disconnected";
   private events: ClientEvents;
   private reconnectDisabled = false;
+  private connectionGeneration = 0;
   private instanceId: string | null;
   private bindingStore: BindingStore;
 
@@ -67,27 +70,49 @@ export class XvcClient {
   }
 
   async connect(): Promise<void> {
-    if (this.status === "connecting" || this.status === "connected") return;
-    this.setStatus("connecting");
+    if (this.reconnectDisabled) {
+      log.info("Reconnect disabled, skipping connect");
+      return;
+    }
 
+    // Guard against duplicate timers/close events creating multiple sockets.
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      return;
+    }
+
+    this.reconnect.cancel();
+    this.setStatus("connecting");
+    const generation = ++this.connectionGeneration;
     try {
-      this.ws = new WebSocket(this.config.serverUrl);
-      this.ws.on("open", () => this.handleOpen());
-      this.ws.on("message", (data) => this.handleMessage(data.toString()));
-      this.ws.on("close", (code, reason) => this.handleClose(code, reason.toString()));
-      this.ws.on("error", (err) => this.handleError(err));
+      const ws = new WebSocket(this.config.serverUrl);
+      this.ws = ws;
+      this.startConnectionTimeout(ws, generation);
+      ws.on("open", () => this.handleOpen(ws, generation));
+      ws.on("message", (data) => {
+        if (this.isCurrentSocket(ws, generation)) this.handleMessage(data.toString());
+      });
+      ws.on("pong", () => {
+        if (this.isCurrentSocket(ws, generation)) this.markTransportAlive();
+      });
+      ws.on("close", (code, reason) => this.handleClose(ws, generation, code, reason.toString()));
+      ws.on("error", (err) => {
+        if (this.isCurrentSocket(ws, generation)) this.handleError(err);
+      });
     } catch (err) {
       log.error("Failed to create WebSocket", err);
+      this.ws = null;
+      this.setStatus("disconnected");
       this.scheduleReconnect();
     }
   }
 
   send(event: XvcEvent): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+    const ws = this.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
       log.warn("Cannot send, WebSocket not open");
       return;
     }
-    this.ws.send(JSON.stringify(event));
+    ws.send(JSON.stringify(event));
   }
 
   disableReconnect(): void {
@@ -102,31 +127,39 @@ export class XvcClient {
 
   disconnect(): void {
     this.disableReconnect();
-    this.reconnect.cancel();
     this.stopHeartbeat();
-    if (this.ws) {
-      this.ws.close(1000, "client disconnect");
-      this.ws = null;
+    this.stopConnectionTimeout();
+    const ws = this.ws;
+    this.ws = null;
+    this.connectionGeneration++;
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      ws.close(1000, "client disconnect");
     }
     this.setStatus("disconnected");
   }
 
-  private handleOpen(): void {
+  private isCurrentSocket(ws: WebSocket, generation: number): boolean {
+    return this.ws === ws && this.connectionGeneration === generation;
+  }
+
+  private handleOpen(ws: WebSocket, generation: number): void {
+    if (!this.isCurrentSocket(ws, generation)) return;
     log.info("WebSocket connected");
     if (this.reconnect.shouldResume) {
-      this.sendResume().catch((err) => log.error("sendResume failed", err));
+      this.sendResume(ws, generation).catch((err) => log.error("sendResume failed", err));
     } else {
-      this.sendConnect().catch((err) => log.error("sendConnect failed", err));
+      this.sendConnect(ws, generation).catch((err) => log.error("sendConnect failed", err));
     }
   }
 
-  private async sendConnect(): Promise<void> {
+  private async sendConnect(ws: WebSocket, generation: number): Promise<void> {
     const binding = await this.bindingStore.read();
     if (!binding) {
       log.error("No binding available, cannot connect");
       this.setStatus("auth_failed");
       return;
     }
+    if (!this.isCurrentSocket(ws, generation) || ws.readyState !== WebSocket.OPEN) return;
     this.instanceId = binding.instanceId;
 
     const payload: ConnectPayload = {
@@ -152,21 +185,22 @@ export class XvcClient {
         "delivery_ack",
       ],
     };
-    this.send(createEvent("connect", payload));
+    ws.send(JSON.stringify(createEvent("connect", payload)));
   }
 
-  private async sendResume(): Promise<void> {
+  private async sendResume(ws: WebSocket, generation: number): Promise<void> {
     const binding = await this.bindingStore.read();
     if (!binding) {
       this.setStatus("auth_failed");
       return;
     }
+    if (!this.isCurrentSocket(ws, generation) || ws.readyState !== WebSocket.OPEN) return;
     const payload: ResumePayload = {
       connection_id: this.reconnect.connectionId!,
       last_event_id: this.reconnect.lastEventId!,
       auth: { token: binding.token },
     };
-    this.send(createEvent("resume", payload));
+    ws.send(JSON.stringify(createEvent("resume", payload)));
   }
 
   private handleMessage(raw: string): void {
@@ -177,13 +211,14 @@ export class XvcClient {
     }
 
     this.reconnect.recordEventId(event.event_id);
-    this.events.onTransportActivity?.();
+    this.markTransportAlive();
 
     switch (event.type) {
       case "connected": {
         const payload = event.payload as ConnectedPayload;
         this.reconnect.recordConnectionId(payload.connection_id);
         this.heartbeatIntervalMs = payload.heartbeat_interval_ms;
+        this.stopConnectionTimeout();
         this.reconnect.reset();
         this.startHeartbeat();
         this.setStatus("connected");
@@ -191,6 +226,7 @@ export class XvcClient {
         break;
       }
       case "resumed": {
+        this.stopConnectionTimeout();
         this.reconnect.reset();
         this.startHeartbeat();
         this.setStatus("connected");
@@ -281,19 +317,14 @@ export class XvcClient {
 
   private retryFreshConnectAfterResumeFailure(message: string): void {
     log.warn(`Resume rejected by server, falling back to fresh connect: ${message}`);
-    this.reconnect.clearSession();
-    this.stopHeartbeat();
-    this.setStatus("disconnected");
-    if (this.ws) {
-      this.ws.close(1000, "retry fresh connect");
-      this.ws = null;
-    }
-    this.scheduleReconnect();
+    this.forceReconnect("resume rejected", true);
   }
 
-  private handleClose(code: number, reason: string): void {
+  private handleClose(ws: WebSocket, generation: number, code: number, reason: string): void {
+    if (!this.isCurrentSocket(ws, generation)) return;
     log.info(`WebSocket closed: code=${code} reason=${reason}`);
     this.stopHeartbeat();
+    this.stopConnectionTimeout();
     this.ws = null;
 
     if (this.status === "auth_failed") return;
@@ -303,6 +334,28 @@ export class XvcClient {
 
   private handleError(err: Error): void {
     log.error("WebSocket error", err);
+    this.forceReconnect(`websocket error: ${err.message}`);
+  }
+
+  private markTransportAlive(): void {
+    this.missedPongs = 0;
+    this.events.onTransportActivity?.();
+  }
+
+  private startConnectionTimeout(ws: WebSocket, generation: number): void {
+    this.stopConnectionTimeout();
+    this.connectionTimeout = setTimeout(() => {
+      if (!this.isCurrentSocket(ws, generation) || this.status === "connected") return;
+      log.warn(`Connection/authentication timed out after ${CONNECTION_TIMEOUT_MS}ms`);
+      this.forceReconnect("connection timeout");
+    }, CONNECTION_TIMEOUT_MS);
+  }
+
+  private stopConnectionTimeout(): void {
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
   }
 
   private startHeartbeat(): void {
@@ -312,9 +365,17 @@ export class XvcClient {
       this.missedPongs++;
       if (this.missedPongs > this.maxMissedPongs) {
         log.warn(`Missed ${this.missedPongs} pongs, reconnecting`);
-        this.ws?.close(4000, "heartbeat timeout");
+        this.forceReconnect("heartbeat timeout");
         return;
       }
+      const ws = this.ws;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        this.forceReconnect("heartbeat found socket not open");
+        return;
+      }
+      // Native WebSocket ping detects half-open TCP connections; the XVC ping
+      // remains for servers that track application-level heartbeat activity.
+      ws.ping();
       const ping: PingPayload = { ts: Date.now() };
       this.send(createEvent("ping", ping));
     }, this.heartbeatIntervalMs);
@@ -327,13 +388,39 @@ export class XvcClient {
     }
   }
 
+  private forceReconnect(reason: string, clearSession = false): void {
+    if (clearSession) this.reconnect.clearSession();
+    this.stopHeartbeat();
+    this.stopConnectionTimeout();
+    const ws = this.ws;
+    this.ws = null;
+    this.connectionGeneration++;
+    if (ws && ws.readyState !== WebSocket.CLOSED) {
+      // terminate() guarantees progress when the peer has left a half-open socket.
+      ws.terminate();
+    }
+    if (this.status !== "auth_failed") this.setStatus("disconnected");
+    log.info(`Forcing reconnect: ${reason}`);
+    this.scheduleReconnect();
+  }
+
   private scheduleReconnect(): void {
     if (this.reconnectDisabled) {
       log.info("Reconnect disabled, skipping");
       return;
     }
-    log.info(`Scheduling reconnect in ${this.reconnect.nextDelay()}ms`);
-    this.reconnect.schedule(() => this.connect());
+    if (this.reconnect.hasScheduledReconnect) {
+      log.debug("Reconnect already scheduled, skipping duplicate schedule");
+      return;
+    }
+    const delay = this.reconnect.nextDelay();
+    log.info(`Scheduling reconnect in ${delay}ms`);
+    this.reconnect.schedule(() => {
+      this.connect().catch((err) => {
+        log.error("Reconnect attempt failed", err);
+        this.scheduleReconnect();
+      });
+    });
   }
 
   private setStatus(status: ConnectionStatus): void {

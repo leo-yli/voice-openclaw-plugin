@@ -58,6 +58,15 @@ describe("ReconnectManager", () => {
     expect(fn).toHaveBeenCalledOnce();
   });
 
+  it("exposes whether a reconnect is already scheduled", () => {
+    const mgr = new ReconnectManager({ minDelayMs: 1000, maxDelayMs: 30000, resume: true });
+    expect(mgr.hasScheduledReconnect).toBe(false);
+    mgr.schedule(() => {});
+    expect(mgr.hasScheduledReconnect).toBe(true);
+    mgr.cancel();
+    expect(mgr.hasScheduledReconnect).toBe(false);
+  });
+
   it("cancel prevents scheduled callback", () => {
     const mgr = new ReconnectManager({ minDelayMs: 1000, maxDelayMs: 30000, resume: true });
     const fn = vi.fn();

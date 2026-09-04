@@ -21,6 +21,10 @@ export class ReconnectManager {
     return this._connectionId;
   }
 
+  get hasScheduledReconnect(): boolean {
+    return this.timer !== null;
+  }
+
   get shouldResume(): boolean {
     return this.config.resume && this._connectionId !== null && this._lastEventId !== null;
   }
